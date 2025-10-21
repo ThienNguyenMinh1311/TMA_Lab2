@@ -1,24 +1,62 @@
-from fastapi import APIRouter, HTTPException, Cookie, Depends, Form, Request
+from fastapi import APIRouter, HTTPException, Cookie, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from datetime import timedelta, datetime
 from jose import jwt
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
+from passlib.context import CryptContext
+from dotenv import load_dotenv
+import os
 
-import app
+# Load environment variables
+load_dotenv()
 
-from .users_db import fake_users_db, verify_password
+# MongoDB connection setup
+MONGODB_URI = "mongodb+srv://tian_ng:matkhau@tiandata.uovixjo.mongodb.net/"
+
+def connect_to_mongodb():
+    try:
+        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        client.admin.command('ping')  # Test connection
+        db = client['mydatabase']
+        return db
+    except ConnectionFailure as e:
+        raise Exception(f"Failed to connect to MongoDB: {e}")
+    except Exception as e:
+        raise Exception(f"An error occurred: {e}")
+
+# Initialize MongoDB
+db = connect_to_mongodb()
+
+# Password verification setup
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+# Configuration
 from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
-from .utils import write_log
+
+# Utility function for logging
+def write_log(message: str):
+    print(f"LOG: {message}")  # Replace with actual logging logic if needed
 
 auth_router = APIRouter()
 
 templates = Jinja2Templates(directory="app/templates")
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
 def authenticate_user(username: str, password: str):
-    user = fake_users_db.get(username)
+    users_collection = db['users']
+    user = users_collection.find_one({"username": username})
     if not user:
         return None
-    if not verify_password(password, user["hashed_password"]):
+    if not verify_password(password, user.get("hashed_password", "")):
         return None
     return user
 
@@ -30,10 +68,6 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 def get_current_user(access_token: str = Cookie(None)):
-    from .users_db import fake_users_db
-    from jose import jwt
-    from fastapi import HTTPException
-
     if not access_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
@@ -42,10 +76,11 @@ def get_current_user(access_token: str = Cookie(None)):
         role = payload.get("role")
         if username is None or role is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        user = fake_users_db.get(username)
+        users_collection = db['users']
+        user = users_collection.find_one({"username": username})
         if user is None:
             raise HTTPException(status_code=401, detail="User not found")
-        return {"username": username, "role": role}
+        return {"username": username, "role": user["role"]}
     except Exception:
         raise HTTPException(status_code=401, detail="Token expired or invalid")
 
@@ -54,10 +89,10 @@ async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 @auth_router.post("/login")
-async def login(username: str = Form(...), password: str = Form(...)):
-    user = authenticate_user(username, password)
+async def login(request: LoginRequest):
+    user = authenticate_user(request.username, request.password)
     if not user:
-        write_log(f"Failed login attempt: {username}")
+        write_log(f"Failed login attempt: {request.username}")
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)

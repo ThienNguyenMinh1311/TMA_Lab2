@@ -1,27 +1,36 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <title>Quản lý tài liệu - Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Luật sư Dashboard</title>
+  <link rel="stylesheet" href="/static/lawyer_dashboard.css" />
 </head>
 <body>
   <div class="container">
-    <div class="sidebar">
-      <h2>Dashboard</h2>
-      <ul id="doc-list"></ul>
+    <h2>Xin chào, {{ username }}</h2>
+
+    <div class="actions">
+      <button id="viewDocsBtn" class="btn">📂 Xem tài liệu</button>
+      <button id="chatBtn" class="btn">💬 Hỏi Chatbot</button>
     </div>
-    <div class="content">
-      <div id="doc-detail">
-        <p>Chọn tài liệu để xem chi tiết</p>
+
+    <!-- Danh sách tài liệu -->
+    <div id="documentsSection" class="section hidden">
+      <h3>Danh sách tài liệu của bạn</h3>
+      <ul id="documentsList"></ul>
+    </div>
+
+    <!-- Giao diện chatbot -->
+    <div id="chatSection" class="section hidden">
+      <div class="chat-window" id="chatWindow"></div>
+      <div class="chat-input">
+        <input type="text" id="chatMessage" placeholder="Nhập tin nhắn..." />
+        <button id="sendBtn">Gửi</button>
       </div>
     </div>
-    <div class="chatbot">
-      <div id="chat-messages" class="chat-messages"></div>
-      <input type="text" id="chat-input" placeholder="Hỏi chatbot...">
-      <button id="chat-send">Gửi</button>
-    </div>
   </div>
-  <script src="script.js"></script>
+
+  <script src="/static/lawyer_dashboard.js"></script>
 </body>
 </html>

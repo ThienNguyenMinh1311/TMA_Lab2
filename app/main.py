@@ -5,11 +5,13 @@ from fastapi.templating import Jinja2Templates
 
 from .auth import auth_router
 from .dashboard import dashboard_router
+from .lawyer_dashboard import router as lawyer_router
+from .admin_dashboard import router as admin_router
 
 app = FastAPI(title="Law Office Document Management Backend")
 
-app.mount("/app/static", StaticFiles(directory="app/static"), name="app/static")
-templates = Jinja2Templates(directory="app/static")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
 
 
 app.add_middleware(
@@ -22,3 +24,5 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(dashboard_router)
+app.include_router(lawyer_router)
+app.include_router(admin_router)

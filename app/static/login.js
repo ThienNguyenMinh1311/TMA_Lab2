@@ -1,30 +1,39 @@
-document.getElementById("loginForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("loginForm");
   const errorMsg = document.getElementById("errorMsg");
 
-  try {
-    const res = await fetch("/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
-    });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-    const data = await res.json();
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
 
-    if (!res.ok) {
-      errorMsg.textContent = data.detail || "Sai tài khoản hoặc mật khẩu";
-      return;
+    try {
+      const response = await fetch("/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || "Đăng nhập thất bại");
+      }
+
+      console.log("Đăng nhập thành công:", data);
+      errorMsg.textContent = "";
+      errorMsg.style.color = "";
+
+      if (data.role === "admin") {
+        window.location.href = "/admin/dashboard";
+      } else {
+        window.location.href = "/lawyer/dashboard";
+      }
+    } catch (err) {
+      errorMsg.textContent = err.message;
+      errorMsg.style.color = "red";
     }
-
-    localStorage.setItem("username", data.username);
-    if (data.username.startsWith("admin")) {
-      window.location.href = "/admin/dashboard";
-    } else {
-      window.location.href = "/lawyer/dashboard";
-    }
-  } catch (error) {
-    errorMsg.textContent = "Lỗi kết nối máy chủ.";
-  }
+  });
 });
