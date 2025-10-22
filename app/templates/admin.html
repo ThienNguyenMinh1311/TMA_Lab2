@@ -1,87 +1,51 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Admin Dashboard</title>
   <link rel="stylesheet" href="/static/admin_dashboard.css">
 </head>
 <body>
-  <div class="container">
-    <h1>👨‍⚖️ Admin Dashboard</h1>
+  <header>
+    <span>⚖️ Admin Dashboard</span>
+  </header>
 
-    <div class="menu">
-      <button class="btn" id="manageUsersBtn">👥 Quản lý nhân viên</button>
-      <button class="btn" id="manageDocsBtn">📂 Quản lý tài liệu</button>
-      <button class="btn" id="configChatbotBtn">🤖 Cấu hình Chatbot</button>
+<nav>
+  <button onclick="showSection('lawyer')">👤 Quản lý luật sư</button>
+  <button onclick="showSection('document')">📂 Quản lý tài liệu</button>
+</nav>
+
+  <section id="lawyer-section" style="display: block;">
+    <button class="add-btn" onclick="showAddForm()">+ Thêm luật sư</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Tài khoản</th>
+          <th>Vai trò</th>
+          <th>Tài liệu được truy cập</th>
+          <th>Hành động</th>
+        </tr>
+      </thead>
+      <tbody id="lawyer-table"></tbody>
+    </table>
+  <section id="document-section" style="display: none;">
+    <h2>📁 Quản lý tài liệu</h2>
+
+    <div class="upload-area">
+      <input type="file" id="documentFile" multiple />
+      <button onclick="uploadDocuments()">⬆️ Tải lên</button>
     </div>
 
-    <!-- Quản lý nhân viên -->
-    <section id="usersSection">
-      <h2>👥 Quản lý nhân viên</h2>
-      <div class="form">
-        <input id="username" type="text" placeholder="Tên người dùng">
-        <input id="password" type="password" placeholder="Mật khẩu">
-        <select id="role">
-          <option value="lawyer">Lawyer</option>
-          <option value="admin">Admin</option>
-        </select>
-        <button id="addUserBtn" class="btn green">➕ Thêm</button>
-      </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Tên đăng nhập</th>
-            <th>Vai trò</th>
-            <th>Thao tác</th>
-          </tr>
-        </thead>
-        <tbody id="userTableBody"></tbody>
-      </table>
-    </section>
-
-    <!-- Quản lý tài liệu -->
-    <section id="docsSection" class="hidden">
-      <h2>📂 Quản lý tài liệu</h2>
-      <div class="form">
-        <input id="docName" type="text" placeholder="Tên tài liệu (VD: case_7.txt)">
-        <button id="addDocBtn" class="btn green">➕ Thêm</button>
-      </div>
-      <ul id="docList"></ul>
-    </section>
-
-    <!-- Cấu hình chatbot -->
-    <section id="chatbotSection" class="hidden">
-      <h2>⚙️ Cấu hình Chatbot</h2>
-      <p>Tại đây bạn có thể thay đổi tham số RAG, upload dữ liệu huấn luyện,...</p>
-      <button class="btn blue">🧠 Cập nhật mô hình</button>
-    </section>
-  </div>
-
-  <!-- Modal sửa user -->
-  <div id="editUserModal" class="modal hidden">
-    <div class="modal-content">
-      <span id="closeEditModal" class="close">&times;</span>
-      <h3>✏️ Sửa thông tin nhân viên</h3>
-
-      <div class="form">
-        <input id="editUsername" type="text" disabled>
-        <input id="editPassword" type="password" placeholder="Mật khẩu mới (để trống nếu không đổi)">
-        <select id="editRole">
-          <option value="lawyer">Lawyer</option>
-          <option value="admin">Admin</option>
-        </select>
-      </div>
-
-      <div class="permissions">
-        <h4>📑 Phân quyền tài liệu</h4>
-        <textarea id="editAccess" placeholder="Nhập tên tài liệu, mỗi dòng một tên hoặc cách nhau bằng dấu phẩy" rows="4"></textarea>
-      </div>
-
-      <button id="saveEditBtn" class="btn green">💾 Lưu thay đổi</button>
-    </div>
-  </div>
-
+    <table border="1" width="100%" style="margin-top: 20px;">
+      <thead>
+        <tr>
+          <th>Tên tài liệu</th>
+          <th>Hành động</th>
+        </tr>
+      </thead>
+      <tbody id="document-table"></tbody>
+    </table>
+  </section>
   <script src="/static/admin_dashboard.js"></script>
 </body>
 </html>

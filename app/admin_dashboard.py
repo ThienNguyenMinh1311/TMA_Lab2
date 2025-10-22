@@ -1,5 +1,9 @@
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, Request, UploadFile, Form
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse 
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+import shutil
+import os
 from pathlib import Path
 from typing import List, Optional
 import os
@@ -9,17 +13,16 @@ from pymongo.errors import ConnectionFailure, DuplicateKeyError
 
 router = APIRouter(prefix="/admin", tags=["Admin Dashboard"])
 
-DATASET_DIR = Path("./dataset")
-DATASET_DIR.mkdir(exist_ok=True, parents=True)
-
-# MongoDB connection setup
+# =========================
+# ⚙️ MongoDB Setup
+# =========================
 MONGODB_URI = "mongodb+srv://tian_ng:matkhau@tiandata.uovixjo.mongodb.net/"
 
 def connect_to_mongodb():
     try:
         client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
-        client.admin.command('ping')  # Test connection
-        db = client['mydatabase']
+        client.admin.command("ping")
+        db = client["mydatabase"]
         return db
     except ConnectionFailure as e:
         raise Exception(f"Failed to connect to MongoDB: {e}")
@@ -27,130 +30,153 @@ def connect_to_mongodb():
         raise Exception(f"An error occurred: {e}")
 
 db = connect_to_mongodb()
+users_collection = db["users"]
+
+# =========================
+# 📂 Dataset directory
+# =========================
+DATASET_DIR = Path("./dataset")
+DATASET_DIR.mkdir(exist_ok=True, parents=True)
 
 # =========================
 # 👤 QUẢN LÝ NHÂN VIÊN
 # =========================
+
 @router.get("/users")
 def get_users():
-    users_collection = db['users']
+    """Lấy danh sách toàn bộ người dùng"""
     users = [
         {
             "username": user["username"],
-            "role": user["role"],
-            "access": user.get("access", [])
+            "role": user.get("role", "lawyer"),
+            "access": user.get("access", []),
         }
         for user in users_collection.find()
     ]
     return JSONResponse({"users": users})
 
+
 @router.post("/users")
-def add_user(user: dict):
-    username = user.get("username")
-    role = user.get("role")
-    password = user.get("password")
-    access = user.get("access", [])
+async def add_user(request: Request):
+    """Thêm người dùng mới"""
+    data = await request.json()
+    username = data.get("username")
+    password = data.get("password")
+    role = data.get("role", "lawyer")
+    access = data.get("access", [])
 
-    if not username or not role or not password:
-        raise HTTPException(status_code=400, detail="Missing username, role, or password")
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Missing username or password")
 
-    users_collection = db['users']
-    try:
-        users_collection.insert_one({
-            "username": username,
-            "hashed_password": get_hashed_password(password),
-            "role": role,
-            "access": access
-        })
-        return JSONResponse({"message": f"User '{username}' added successfully."})
-    except DuplicateKeyError:
+    # Kiểm tra trùng username
+    if users_collection.find_one({"username": username}):
         raise HTTPException(status_code=400, detail="User already exists")
+
+    # Tạo người dùng mới
+    new_user = {
+        "username": username,
+        "hashed_password": get_hashed_password(password),
+        "role": role,
+        "access": access,
+    }
+
+    users_collection.insert_one(new_user)
+    return JSONResponse({"message": f"User '{username}' added successfully."})
+
 
 @router.put("/users/{username}")
 async def update_user(username: str, request: Request):
     """
-    Cập nhật role, password và access cùng lúc.
-    Body JSON:
+    Cập nhật thông tin user (role, password, access/documents).
+    Body JSON có thể gồm:
     {
-        "role": "lawyer/admin",
-        "password": "newpassword" (optional),
-        "documents": ["doc1.txt", "doc2.pdf"] (optional)
+        "role": "lawyer" hoặc "admin",
+        "password": "newpass" (tùy chọn),
+        "documents": ["case_1", "case_2"]
     }
     """
     data = await request.json()
+    print("📩 DATA NHẬN ĐƯỢC:", data)
+
     role = data.get("role")
     password = data.get("password")
-    documents = data.get("documents")
+    documents = data.get("documents")  # ← Giao diện gửi lên là 'documents', không phải 'access'
 
-    if not role:
-        raise HTTPException(status_code=400, detail="Role is required")
-
-    users_collection = db['users']
+    users_collection = db["users"]
     user = users_collection.find_one({"username": username})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    update_data = {"role": role}
+    update_data = {}
+
+    # role
+    if role and role != user.get("role"):
+        update_data["role"] = role
+
+    # password
     if password:
         update_data["hashed_password"] = get_hashed_password(password)
-    if documents is not None:
-        # Lọc các tên tài liệu tồn tại trong DATASET_DIR
-        valid_docs = [doc for doc in documents if (DATASET_DIR / doc).exists()]
-        update_data["access"] = valid_docs
 
-    users_collection.update_one({"username": username}, {"$set": update_data})
+    # documents → access
+    if documents is not None:
+        # lọc chuỗi trắng, loại ký tự thừa
+        access_clean = [x.strip().strip('"').strip("'") for x in documents if x.strip()]
+        update_data["access"] = access_clean
+        print("✅ ACCESS PARSED:", access_clean)
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+
+    result = users_collection.update_one({"username": username}, {"$set": update_data})
+    print("🧩 KẾT QUẢ UPDATE:", result.raw_result)
+
+    if result.modified_count == 0:
+        return JSONResponse({"message": f"No changes made for '{username}'."})
+
     return JSONResponse({"message": f"User '{username}' updated successfully."})
+
+
 
 @router.delete("/users/{username}")
 def delete_user(username: str):
-    users_collection = db['users']
+    """Xóa người dùng (trừ admin)"""
     user = users_collection.find_one({"username": username})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user["role"] == "admin":
-        raise HTTPException(status_code=403, detail="Admin cannot be deleted")
+    if user.get("role") == "admin":
+        raise HTTPException(status_code=403, detail="Cannot delete admin user")
 
-    result = users_collection.delete_one({"username": username})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="User not found")
+    users_collection.delete_one({"username": username})
     return JSONResponse({"message": f"User '{username}' deleted successfully."})
 
+
 # =========================
-# 📂 QUẢN LÝ TÀI LIỆU
+# 📁 Templates & dataset
 # =========================
-@router.get("/documents")
-def get_documents():
-    files = [
-        f.name for f in DATASET_DIR.iterdir()
-        if f.is_file() and f.suffix in [".txt", ".pdf", ".docx"]
-    ]
-    return JSONResponse({"documents": files})
+templates = Jinja2Templates(directory="./app/templates")
 
-@router.post("/documents")
-def add_document(file: dict):
-    filename = file.get("filename")
-    if not filename:
-        raise HTTPException(status_code=400, detail="Missing filename")
+DATASET_DIR = Path("./app/dataset")
+DATASET_DIR.mkdir(parents=True, exist_ok=True)
 
-    path = DATASET_DIR / filename
-    if path.exists():
-        raise HTTPException(status_code=400, detail="Document already exists")
+# =========================
+# 🔹 QUẢN LÝ TÀI LIỆU LOCAL
+# =========================
 
-    path.write_text("Nội dung mới được tạo.")
-    return JSONResponse({"message": f"Document '{filename}' added successfully."})
-
-@router.delete("/documents/{filename}")
-def delete_document(filename: str):
-    path = DATASET_DIR / filename
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Document not found")
-
-    os.remove(path)
-
-    users_collection = db['users']
-    users_collection.update_many(
-        {"access": filename},
-        {"$pull": {"access": filename}}
+@router.get("/documents", response_class=HTMLResponse)
+async def admin_documents(request: Request):
+    """Hiển thị danh sách tài liệu local"""
+    files = [f.name for f in DATASET_DIR.iterdir() if f.is_file()]
+    return templates.TemplateResponse(
+        "admin.html",
+        {"request": request, "files": files}
     )
-    return JSONResponse({"message": f"Document '{filename}' deleted successfully."})
+
+
+@router.post("/upload")
+async def upload_document(file: UploadFile):
+    """Xử lý tải lên tài liệu"""
+    dest_path = DATASET_DIR / file.filename
+    with open(dest_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return RedirectResponse(url="/admin/documents", status_code=303)

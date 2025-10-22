@@ -28,7 +28,7 @@ templates = Jinja2Templates(directory="templates")
 
 router = APIRouter(prefix="/lawyer", tags=["Lawyer Dashboard"])
 
-DATASET_DIR = Path("./app/dataset")
+DATASET_DIR = Path("C:/Users/intern.nmthien2/tian_ng/2nd_project/app/dataset/")
 
 # ----------------- AUTH HELPER -----------------
 def get_current_user(request: Request):
@@ -53,14 +53,17 @@ async def lawyer_dashboard(request: Request, current_user: dict = Depends(get_cu
     return templates.TemplateResponse("lawyer_dashboard.html", {"request": request, "username": username})
 
 # ----------------- TÀI LIỆU -----------------
-@router.get("/documents")
+@router.get("/documents", response_class=JSONResponse)
 async def get_lawyer_documents(current_user: dict = Depends(get_current_user)):
+    """
+    Trả danh sách tài liệu mà user có quyền truy cập (theo 'access' trong MongoDB)
+    """
     allowed_docs = current_user.get("access", [])
     available_docs = []
 
     for doc_name in allowed_docs:
-        file_path = DATASET_DIR / f"{doc_name}"
+        file_path = DATASET_DIR / doc_name
         if file_path.exists():
-            available_docs.append(f"{doc_name}")
+            available_docs.append(doc_name)
 
     return JSONResponse({"documents": available_docs})

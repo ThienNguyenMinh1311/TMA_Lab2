@@ -11,6 +11,8 @@ from .admin_dashboard import router as admin_router
 app = FastAPI(title="Law Office Document Management Backend")
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/dataset", StaticFiles(directory="app/dataset"), name="dataset")
+
 templates = Jinja2Templates(directory="app/templates")
 
 
