@@ -28,7 +28,7 @@ templates = Jinja2Templates(directory="templates")
 
 router = APIRouter(prefix="/lawyer", tags=["Lawyer Dashboard"])
 
-DATASET_DIR = Path("C:/Users/intern.nmthien2/tian_ng/2nd_project/app/dataset/")
+DATASET_DIR = Path("./app/dataset/")
 
 # ----------------- AUTH HELPER -----------------
 def get_current_user(request: Request):
