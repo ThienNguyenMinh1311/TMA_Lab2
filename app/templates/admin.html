@@ -10,11 +10,12 @@
     <span>⚖️ Admin Dashboard</span>
   </header>
 
-<nav>
-  <button onclick="showSection('lawyer')">👤 Quản lý luật sư</button>
-  <button onclick="showSection('document')">📂 Quản lý tài liệu</button>
-</nav>
+  <nav>
+    <button onclick="showSection('lawyer')">👤 Quản lý luật sư</button>
+    <button onclick="showSection('document')">📂 Quản lý tài liệu</button>
+  </nav>
 
+  <!-- 👇 Phần quản lý luật sư -->
   <section id="lawyer-section" style="display: block;">
     <button class="add-btn" onclick="showAddForm()">+ Thêm luật sư</button>
     <table>
@@ -28,6 +29,9 @@
       </thead>
       <tbody id="lawyer-table"></tbody>
     </table>
+  </section> <!-- 🔹 Đóng thẻ ở đây -->
+
+  <!-- 👇 Phần quản lý tài liệu -->
   <section id="document-section" style="display: none;">
     <h2>📁 Quản lý tài liệu</h2>
 
@@ -46,6 +50,7 @@
       <tbody id="document-table"></tbody>
     </table>
   </section>
+
   <script src="/static/admin_dashboard.js"></script>
 </body>
 </html>

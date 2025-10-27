@@ -163,23 +163,30 @@ async function deleteUser(username) {
 // =============================
 async function loadDocuments() {
   try {
-    const res = await fetch(`${API_BASE.replace("/admin", "")}/admin/documents`);
+    const res = await fetch(`${API_BASE}/documents`);
+    if (!res.ok) throw new Error("Không thể tải danh sách tài liệu");
     const data = await res.json();
+
     const tbody = document.getElementById("document-table");
     tbody.innerHTML = "";
 
-    (data.documents || []).forEach(doc => {
+    if (!data.documents || data.documents.length === 0) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="2" style="text-align:center;">Không có tài liệu nào</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    data.documents.forEach((doc) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${doc}</td>
-        <td>
-          <button onclick="deleteDocument('${doc}')">🗑️ Xóa</button>
-        </td>
+        <td><button onclick="deleteDocument('${doc}')">🗑️ Xóa</button></td>
       `;
       tbody.appendChild(tr);
     });
   } catch (err) {
-    console.error("Lỗi tải tài liệu:", err);
+    console.error("❌ Lỗi tải tài liệu:", err);
     alert("Không thể tải danh sách tài liệu!");
   }
 }

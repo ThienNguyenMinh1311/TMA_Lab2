@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, UploadFile, Form
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse 
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi import UploadFile, File
 import shutil
 import os
 from pathlib import Path
@@ -33,9 +34,10 @@ db = connect_to_mongodb()
 users_collection = db["users"]
 
 # =========================
-# 📂 Dataset directory
+# 📁 Templates & dataset
 # =========================
-DATASET_DIR = Path("./dataset")
+templates = Jinja2Templates(directory="./app/templates")
+DATASET_DIR = Path("./app/dataset")
 DATASET_DIR.mkdir(exist_ok=True, parents=True)
 
 # =========================
@@ -150,33 +152,32 @@ def delete_user(username: str):
     users_collection.delete_one({"username": username})
     return JSONResponse({"message": f"User '{username}' deleted successfully."})
 
-
-# =========================
-# 📁 Templates & dataset
-# =========================
-templates = Jinja2Templates(directory="./app/templates")
-
-DATASET_DIR = Path("./app/dataset")
-DATASET_DIR.mkdir(parents=True, exist_ok=True)
-
 # =========================
 # 🔹 QUẢN LÝ TÀI LIỆU LOCAL
 # =========================
 
-@router.get("/documents", response_class=HTMLResponse)
-async def admin_documents(request: Request):
-    """Hiển thị danh sách tài liệu local"""
+@router.get("/documents")
+async def list_documents():
     files = [f.name for f in DATASET_DIR.iterdir() if f.is_file()]
-    return templates.TemplateResponse(
-        "admin.html",
-        {"request": request, "files": files}
-    )
+    return JSONResponse({"documents": files})
 
 
-@router.post("/upload")
-async def upload_document(file: UploadFile):
-    """Xử lý tải lên tài liệu"""
-    dest_path = DATASET_DIR / file.filename
-    with open(dest_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    return RedirectResponse(url="/admin/documents", status_code=303)
+@router.post("/documents/upload")
+async def upload_documents(files: List[UploadFile] = File(...)):
+    uploaded_files = []
+    for file in files:
+        dest_path = DATASET_DIR / file.filename
+        with open(dest_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        uploaded_files.append(file.filename)
+    return JSONResponse({"message": "Upload thành công", "uploaded": uploaded_files})
+
+
+@router.delete("/documents/{filename}")
+async def delete_document(filename: str):
+    file_path = DATASET_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    os.remove(file_path)
+    return JSONResponse({"message": f"File '{filename}' deleted successfully."})
