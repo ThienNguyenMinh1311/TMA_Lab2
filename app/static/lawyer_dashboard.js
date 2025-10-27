@@ -9,7 +9,6 @@ const chatInput = document.getElementById("chatMessage");
 
 // ======================= 📂 XEM TÀI LIỆU =======================
 viewDocsBtn.addEventListener("click", async () => {
-  // Ẩn chatbot, hiển thị danh sách tài liệu
   chatSection.classList.add("hidden");
   documentsSection.classList.remove("hidden");
 
@@ -27,8 +26,8 @@ viewDocsBtn.addEventListener("click", async () => {
 
         btn.textContent = `📄 ${doc}`;
         btn.className = "doc-btn";
-        // ⚙️ Đường dẫn tuyệt đối tránh lỗi /lawyer/dataset/
         btn.onclick = () => window.open(`${window.location.origin}/dataset/${doc}`, "_blank");
+
         li.appendChild(btn);
         documentsList.appendChild(li);
       });
@@ -43,31 +42,13 @@ viewDocsBtn.addEventListener("click", async () => {
 
 // ======================= 💬 CHATBOT =======================
 chatBtn.addEventListener("click", () => {
-  documentsSection.classList.add("hidden");
-  chatSection.classList.remove("hidden");
-});
-
-sendBtn.addEventListener("click", async () => {
-  const msg = chatInput.value.trim();
-  if (!msg) return;
-
-  appendMessage("user", msg);
-  chatInput.value = "";
-
   try {
-    const res = await fetch("/api/chatbot", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: msg })
-    });
-
-    if (!res.ok) throw new Error("Chatbot không phản hồi.");
-    const data = await res.json();
-
-    appendMessage("bot", data.reply || "Bot không có phản hồi.");
+    // ✅ Chuyển hướng qua backend /lawyer/chatbot
+    // FastAPI sẽ kiểm tra JWT và redirect đến workspace của user
+    window.location.href = "/lawyer/chatbot";
   } catch (error) {
-    appendMessage("bot", "⚠️ Lỗi khi gửi tin nhắn tới chatbot.");
-    console.error(error);
+    console.error("❌ Lỗi khi chuyển hướng đến chatbot:", error);
+    alert("Không thể mở chatbot. Vui lòng thử lại sau.");
   }
 });
 

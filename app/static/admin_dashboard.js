@@ -42,11 +42,32 @@ function renderUserTable() {
       <td>
         <button onclick="openEditModal('${user.username}')">Sửa</button>
         <button onclick="deleteUser('${user.username}')" ${user.role === "admin" ? "disabled" : ""}>Xóa</button>
+        <button onclick="createWorkspace('${user.username}')">🌐 Tạo Workspace</button>
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
+
+async function createWorkspace(username) {
+  if (!confirm(`Tạo workspace cho người dùng '${username}'?`)) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/create-workspace/${username}`, {
+      method: "POST",
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Tạo workspace thất bại");
+
+    alert(`✅ Đã tạo workspace cho ${username}!\nSlug: ${data.workspace?.slug || "N/A"}`);
+    await loadUsers();
+  } catch (err) {
+    console.error("Lỗi tạo workspace:", err);
+    alert(`❌ Lỗi khi tạo workspace cho ${username}!`);
+  }
+}
+
 
 function showAddForm() {
   const modal = createModal("Thêm luật sư mới", [

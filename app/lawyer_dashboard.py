@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from jose import jwt, JWTError
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
+from app.auth import get_current_user
 from .config import SECRET_KEY, ALGORITHM
 
 # MongoDB connection setup
@@ -67,3 +68,20 @@ async def get_lawyer_documents(current_user: dict = Depends(get_current_user)):
             available_docs.append(doc_name)
 
     return JSONResponse({"documents": available_docs})
+
+# ----------------- 🧠 LẤY USER HIỆN TẠI (nếu cần dùng riêng) -----------------
+@router.get("/current-user", response_class=JSONResponse)
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    """Trả username hiện tại (chỉ dùng nếu FE cần)"""
+    return JSONResponse({"username": current_user["username"]})
+
+
+# ----------------- 💬 CHATBOT REDIRECT -----------------
+@router.get("/chatbot")
+async def redirect_to_chatbot(current_user: dict = Depends(get_current_user)):
+    """
+    ✅ Chuyển hướng người dùng đã xác thực tới workspace riêng của họ trên AnythingLLM
+    """
+    username = current_user["username"]
+    workspace_url = f"http://localhost:3001/workspace/{username}_workspace"
+    return RedirectResponse(url=workspace_url)

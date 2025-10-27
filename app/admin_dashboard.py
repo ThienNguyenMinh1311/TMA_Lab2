@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi import UploadFile, File
 import shutil
 import os
+import requests
 from pathlib import Path
 from typing import List, Optional
 import os
@@ -181,3 +182,91 @@ async def delete_document(filename: str):
 
     os.remove(file_path)
     return JSONResponse({"message": f"File '{filename}' deleted successfully."})
+
+# ==============================
+# 🔹 AnythingLLM Configuration
+# ==============================
+
+ANYTHING_API_KEY = "TE1BT2R-STZ4HK4-K8EGEY7-DVY0KDG"
+ANYTHING_API_BASE = "http://localhost:3001/api/v1"
+
+HEADERS_JSON = {
+    "Authorization": f"Bearer {ANYTHING_API_KEY}",
+    "Content-Type": "application/json",
+    "accept": "application/json",
+}
+
+HEADERS_UPLOAD = {
+    "Authorization": f"Bearer {ANYTHING_API_KEY}",
+    "accept": "application/json",
+}
+
+# ====== Đường dẫn dataset ======
+DATASET_DIR = "./app/dataset"
+
+
+@router.post("/create-workspace/{username}")
+def create_workspace(username: str):
+    """
+    ✅ Khi admin nhấn "Tạo Workspace"
+    1️⃣ Gọi AnythingLLM API để tạo workspace <username>_workspace
+    2️⃣ Tự động embed tất cả file trong access của user
+    """
+    # 🔹 Bước 1: Lấy thông tin user từ MongoDB
+    user = users_collection.find_one({"username": username})
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Không tìm thấy người dùng {username}")
+
+    workspace_name = f"{username}_workspace"
+
+    # 🔹 Bước 2: Tạo workspace trong AnythingLLM
+    create_url = f"{ANYTHING_API_BASE}/workspace/new"
+    payload = {"name": workspace_name}
+
+    try:
+        res = requests.post(create_url, headers=HEADERS_JSON, json=payload)
+        if res.status_code != 200:
+            raise HTTPException(status_code=res.status_code, detail=f"Lỗi tạo workspace: {res.text}")
+
+        data = res.json()
+        print(f"✅ Workspace created: {data}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi gọi AnythingLLM API: {e}")
+
+    # 🔹 Bước 3: Embed các file access của user
+    access_files = user.get("access", [])
+    failed_files = []
+
+    for filename in access_files:
+        file_path = os.path.join(DATASET_DIR, filename)
+        if not os.path.exists(file_path):
+            failed_files.append(filename)
+            continue
+
+        upload_url = f"{ANYTHING_API_BASE}/document/upload/custom-documents"
+
+        files = {
+            "file": (filename, open(file_path, "rb"), "text/plain")
+        }
+        data_upload = {
+            "addToWorkspaces": workspace_name,
+            "metadata": ""
+        }
+
+        try:
+            upload_res = requests.post(upload_url, headers=HEADERS_UPLOAD, files=files, data=data_upload)
+            if upload_res.status_code != 200:
+                failed_files.append(filename)
+            else:
+                print(f"📄 Uploaded {filename} -> {workspace_name}")
+
+        except Exception as e:
+            print(f"❌ Lỗi upload {filename}: {e}")
+            failed_files.append(filename)
+
+    return {
+        "message": f"Workspace '{workspace_name}' đã được tạo thành công!",
+        "workspace": {"slug": workspace_name},
+        "failed_files": failed_files
+    }
