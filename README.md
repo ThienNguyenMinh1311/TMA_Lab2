@@ -26,7 +26,6 @@ This minimizes compatibility issues across different systems and simplifies depl
 Modify the .env file to suit your setup:
 
    ```bash
-   Copy code
    PORT=3001
    LLM_PROVIDER=ollama
    OLLAMA_BASE_PATH=http://localhost:11434
@@ -36,108 +35,78 @@ Modify the .env file to suit your setup:
 4. **Start the application using Docker Compose**
 
    ```bash
-   Copy code
    docker compose up -d
 This command builds and launches all containers in detached mode, running the backend, frontend, and any related services.
 
 5. **Access the web interface**
 
-   - [Local access](http://localhost:3001)  
-   - [Remote access](http://<HOST_IP>:3001)
+   - Local access: http://localhost:3001
+   - Remote access: http://<HOST_IP>:3001
 
 💡 Using Docker ensures a robust, scalable, and cross-platform setup that simplifies updates and guarantees consistent deployment across environments.
 
 ## 🧠 2. Cloning the Application Repository from GitHub and Environment Setup
 The application source code is hosted on GitHub to ensure version control, collaboration, and reproducibility.
 
-###🧩 Steps
+### 🧩 Steps
 1. **Clone the repository**
 
    ```bash
-   Copy code
    git clone https://github.com/ThienNguyenMinh1311/TMA_Lab2.git
    cd app
+   
 2. **Install dependencies**
 
    ```bash
    Copy code
    pip install -r requirements.txt
+   
 This ensures that all required Python packages are installed in the environment, matching the development configuration.
 
 3. **(Optional) Configure environment variables**
 If the application requires specific configuration, create a .env file and define:
 
    ```bash
-   Copy code
    DATABASE_URL=sqlite:///data.db
    API_KEY=your-api-key
    MODEL_PATH=/models/qwen3
+   
 These parameters ensure smooth communication between the backend services and other integrated systems.
 
 ## ⚙️ 3. Execution
-Once all dependencies are installed, the application can be launched using Uvicorn, a high-performance ASGI server for FastAPI.
-
+The FastAPI backend is powered by Uvicorn, a high-performance ASGI server, enabling integration with the AnythingLLM frontend and other services.
 ### 🧩 Run in Development Mode
+To start the backend locally with auto-reload:
    ```bash
-   Copy code
-   cd ..
-   uvicorn app.main:app --reload
-- Default access: http://127.0.0.1:8000
+   cd TMA_Lab2/app
+   uvicorn main:app --reload
 
-- The --reload flag automatically restarts the server whenever changes are made to the code, ideal for development.
+Access: http://127.0.0.1:8000
+The --reload flag restarts the server on code changes, ideal for development.
 
-### 🧩 Enable Remote Access
-If you want other devices on the same network to access the backend:
+💡 Use this mode for active development and testing.
+🧩 Enable Remote Access
+To allow access from other devices on the same network:
+bashuvicorn main:app --host 0.0.0.0 --port 8000
 
-   ```bash
-   Copy code
-   uvicorn app.main:app --host 0.0.0.0 --port 8000
-Now, the backend can be accessed through:
+Access: http://<HOST_IP>:8000 (e.g., http://192.168.1.15:8000)
 
-   ```cpp
-   Copy code
-   http://<HOST_IP>:8000
-⚙️ This allows the FastAPI backend to integrate seamlessly with the frontend or other services (e.g., the AnythingLLM interface).
+🧩 Common Use Cases
 
-## 🧾 4. Summary
-Component	Description
-Docker Compose	Orchestrates AnythingLLM services (backend, frontend, and storage)
-.env File	Centralized configuration for environment variables and API keys
-FastAPI + Uvicorn	Lightweight Python backend for APIs and ML model serving
-Ollama / OpenAI	Supported LLM providers for natural language processing
-Port 3001 / 8000	Default ports for AnythingLLM UI and FastAPI backend
+Local testing: http://127.0.0.1:8000
+Intranet testing: http://<HOST_IP>:8000
+Production deployment: Use Docker or a process manager (e.g., Gunicorn + Nginx)
 
-## 🛠️ 5. Troubleshooting
-⚠️ 401 Unauthorized Error
-If you see:
+💡 Uvicorn ensures high performance and compatibility with FastAPI.
+🧩 Troubleshooting
 
-   ```arduino
-   Copy code
-   401 You have insufficient permissions for this operation. Missing scopes: api.responses.write
-Check that your API key or token has the correct scopes and roles.
-Then restart the service:
+Port already in use: Change the port (e.g., --port 8001) or update the .env file.
+Connection refused: Ensure the firewall allows inbound traffic on port 8000.
+Code not updating: Verify the --reload flag is used in development mode.
 
-   ```bash
-   Copy code
-   docker compose up -d
-⚠️ Port Conflict
-If port 3001 or 8000 is already in use, modify the PORT value in .env or the Uvicorn command.
-
-⚠️ Model Connection Issues
-If AnythingLLM cannot connect to your model provider:
-
-Ensure Ollama or OpenAI endpoints are reachable.
-
-Verify the OLLAMA_BASE_PATH and LLM_PROVIDER values in .env.
-
-## 📚 6. References
-- AnythingLLM GitHub Repository
-
-- FastAPI Documentation
-
-- Uvicorn Documentation
-
-- Docker Documentation
+✅ Next Step:
+Confirm the backend is running, then integrate with the AnythingLLM frontend or test API routes at:
+http://127.0.0.1:8000/docs
 
 🧩 Author: ThienNguyenMinh1311
 📅 Last Updated: October 2025
