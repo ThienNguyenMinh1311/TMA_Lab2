@@ -26,9 +26,14 @@ This minimizes compatibility issues across different systems and simplifies depl
 - Edit the docker-compose.yml in anything-llm/docker
 - Modify the .env file in antything-llm/server to suit your setup:
    ```bash
-   #Adding this to the end of your .env file
+   cd server
+   cp .env.example .env
+   ```
+   + Adding this to the end of your .env file
+   ```bash
    ENABLE_ADMIN_API=true
    ADMIN_API_KEY=<your_api_key>
+   ```
 
 4. **Start the application using Docker Compose**
 
