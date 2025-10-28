@@ -82,6 +82,7 @@ The FastAPI backend is powered by Uvicorn, a high-performance ASGI server, enabl
 To start the backend locally with auto-reload:
 
    ```bash
+   cd ..
    uvicorn app.main:app --reload
    ```
 
