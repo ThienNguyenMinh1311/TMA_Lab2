@@ -74,4 +74,11 @@ These parameters ensure smooth communication between the backend services and ot
 The FastAPI backend is powered by Uvicorn, a high-performance ASGI server, enabling integration with the AnythingLLM frontend and other services.
 ### 🧩 Run in Development Mode
 To start the backend locally with auto-reload:
+   ```bash
+   cd TMA_Lab2
+   uvicorn app.main:app --reload
+
+Access: http://127.0.0.1:8000
+
+
    
