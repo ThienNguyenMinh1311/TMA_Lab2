@@ -56,11 +56,12 @@ The application source code is hosted on GitHub to ensure version control, colla
 
    ```bash
    git clone https://github.com/ThienNguyenMinh1311/TMA_Lab2.git
-   cd app
+   cd TMA_Lab2
    
 2. **Install dependencies**
 
    ```bash
+   cd app
    pip install -r requirements.txt
    
 This ensures that all required Python packages are installed in the environment, matching the development configuration.
@@ -81,7 +82,6 @@ The FastAPI backend is powered by Uvicorn, a high-performance ASGI server, enabl
 To start the backend locally with auto-reload:
 
    ```bash
-   cd TMA_Lab2
    uvicorn app.main:app --reload
    ```
 
