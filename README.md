@@ -74,11 +74,42 @@ These parameters ensure smooth communication between the backend services and ot
 The FastAPI backend is powered by Uvicorn, a high-performance ASGI server, enabling integration with the AnythingLLM frontend and other services.
 ### 🧩 Run in Development Mode
 To start the backend locally with auto-reload:
+
    ```bash
    cd TMA_Lab2
    uvicorn app.main:app --reload
+   ```
 
 Access: http://127.0.0.1:8000
+The --reload flag restarts the server on code changes, ideal for development.
+
+💡 Use this mode for active development and testing.
+🧩 Enable Remote Access
+To allow access from other devices on the same network:
+bashuvicorn main:app --host 0.0.0.0 --port 8000
+
+Access: http://<HOST_IP>:8000 (e.g., http://192.168.1.15:8000)
+
+🧩 Common Use Cases
+
+Local testing: http://127.0.0.1:8000
+Intranet testing: http://<HOST_IP>:8000
+Production deployment: Use Docker or a process manager (e.g., Gunicorn + Nginx)
+
+💡 Uvicorn ensures high performance and compatibility with FastAPI.
+🧩 Troubleshooting
+
+Port already in use: Change the port (e.g., --port 8001) or update the .env file.
+Connection refused: Ensure the firewall allows inbound traffic on port 8000.
+Code not updating: Verify the --reload flag is used in development mode.
+
+✅ Next Step:
+Confirm the backend is running, then integrate with the AnythingLLM frontend or test API routes at:
+http://127.0.0.1:8000/docs
+
+🧩 Author: ThienNguyenMinh1311
+📅 Last Updated: October 2025
+⚡ License: MIT
 
 
    
