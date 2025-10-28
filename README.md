@@ -63,4 +63,15 @@ This ensures that all required Python packages are installed in the environment,
 3. **(Optional) Configure environment variables**
 If the application requires specific configuration, create a .env file and define:
 
+   ```bash
+   DATABASE_URL=sqlite:///data.db
+   API_KEY=your-api-key
+   MODEL_PATH=/models/qwen3
+   
+These parameters ensure smooth communication between the backend services and other integrated systems.
+
+## ⚙️ 3. Execution
+The FastAPI backend is powered by Uvicorn, a high-performance ASGI server, enabling integration with the AnythingLLM frontend and other services.
+### 🧩 Run in Development Mode
+To start the backend locally with auto-reload:
    
