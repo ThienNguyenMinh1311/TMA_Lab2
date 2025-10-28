@@ -23,15 +23,12 @@ This minimizes compatibility issues across different systems and simplifies depl
    git clone https://github.com/Mintplex-Labs/anything-llm.git
    cd anything-llm
 3. **Configure environment variables**
-Modify the .env file to suit your setup:
-
+- Edit the docker-compose.yml in anything-llm/docker
+- Modify the .env file in antything-llm/server to suit your setup:
    ```bash
-   PORT=3001
-   LLM_PROVIDER=ollama
-   OLLAMA_BASE_PATH=http://localhost:11434
-   OLLAMA_MODEL_PREF=qwen3:8b
-   STORAGE_DIR=/app/server/storage
-   JWT_SECRET="your-random-secret-key"
+   ENABLE_ADMIN_API=true
+   ADMIN_API_KEY=<your_api_key>
+
 4. **Start the application using Docker Compose**
 
    ```bash
