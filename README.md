@@ -26,6 +26,7 @@ This minimizes compatibility issues across different systems and simplifies depl
 - Edit the docker-compose.yml in anything-llm/docker
 - Modify the .env file in antything-llm/server to suit your setup:
    ```bash
+   #Adding this to the end of your .env file
    ENABLE_ADMIN_API=true
    ADMIN_API_KEY=<your_api_key>
 
@@ -55,7 +56,6 @@ The application source code is hosted on GitHub to ensure version control, colla
 2. **Install dependencies**
 
    ```bash
-   Copy code
    pip install -r requirements.txt
    
 This ensures that all required Python packages are installed in the environment, matching the development configuration.
