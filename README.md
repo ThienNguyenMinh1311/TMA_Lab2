@@ -114,7 +114,9 @@ Confirm the backend is running, then integrate with the AnythingLLM frontend or 
 http://127.0.0.1:8000/docs
 
 🧩 Author: ThienNguyenMinh1311
+
 📅 Last Updated: October 2025
+
 ⚡ License: MIT
 
 
