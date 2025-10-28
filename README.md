@@ -92,7 +92,10 @@ The --reload flag restarts the server on code changes, ideal for development.
 💡 Use this mode for active development and testing.
 🧩 Enable Remote Access
 To allow access from other devices on the same network:
-bashuvicorn main:app --host 0.0.0.0 --port 8000
+
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
 
 Access: http://<HOST_IP>:8000 (e.g., http://192.168.1.15:8000)
 
