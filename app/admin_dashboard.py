@@ -187,7 +187,7 @@ async def delete_document(filename: str):
 # 🔹 AnythingLLM Configuration
 # ==============================
 
-ANYTHING_API_KEY = "TE1BT2R-STZ4HK4-K8EGEY7-DVY0KDG"
+ANYTHING_API_KEY = "YOUR_API_KEY"
 ANYTHING_API_BASE = "http://localhost:3001/api/v1"
 
 HEADERS_JSON = {
