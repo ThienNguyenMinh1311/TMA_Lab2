@@ -7,6 +7,9 @@ from .auth import auth_router
 from .dashboard import dashboard_router
 from .lawyer_dashboard import router as lawyer_router
 from .admin_dashboard import router as admin_router
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Law Office Document Management Backend")
 

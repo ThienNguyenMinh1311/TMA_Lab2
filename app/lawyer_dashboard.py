@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Request, Depends, HTTPException
+import re
+from fastapi import APIRouter, Request, Depends, HTTPException, Form, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from jose import jwt, JWTError
 from fastapi.templating import Jinja2Templates
@@ -6,10 +7,14 @@ from pathlib import Path
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from app.auth import get_current_user
-from .config import SECRET_KEY, ALGORITHM
-
-# MongoDB connection setup
-MONGODB_URI = "mongodb+srv://tian_ng:matkhau@tiandata.uovixjo.mongodb.net/"
+from app.config import MONGODB_URI, SECRET_KEY, ALGORITHM, ANYTHING_API_BASE, ANYTHING_API_KEY
+from app.anythingllm_api import (
+    get_chatbot_history,
+    chat,
+    upload_document_to_workspace,
+    new_thread
+)
+import requests
 
 def connect_to_mongodb():
     try:
@@ -31,22 +36,6 @@ router = APIRouter(prefix="/lawyer", tags=["Lawyer Dashboard"])
 
 DATASET_DIR = Path("./app/dataset/")
 
-# ----------------- AUTH HELPER -----------------
-def get_current_user(request: Request):
-    token = request.cookies.get("access_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-        users_collection = db['users']
-        user = users_collection.find_one({"username": username})
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-        return user
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
 # ----------------- DASHBOARD -----------------
 @router.get("/dashboard", response_class=HTMLResponse)
 async def lawyer_dashboard(request: Request, current_user: dict = Depends(get_current_user)):
@@ -59,6 +48,8 @@ async def get_lawyer_documents(current_user: dict = Depends(get_current_user)):
     """
     Trả danh sách tài liệu mà user có quyền truy cập (theo 'access' trong MongoDB)
     """
+    print("✅ current_user:", current_user)
+
     allowed_docs = current_user.get("access", [])
     available_docs = []
 
@@ -69,19 +60,70 @@ async def get_lawyer_documents(current_user: dict = Depends(get_current_user)):
 
     return JSONResponse({"documents": available_docs})
 
-# ----------------- 🧠 LẤY USER HIỆN TẠI (nếu cần dùng riêng) -----------------
-@router.get("/current-user", response_class=JSONResponse)
-async def get_current_user_info(current_user: dict = Depends(get_current_user)):
-    """Trả username hiện tại (chỉ dùng nếu FE cần)"""
-    return JSONResponse({"username": current_user["username"]})
-
-
-# ----------------- 💬 CHATBOT REDIRECT -----------------
-@router.get("/chatbot")
-async def redirect_to_chatbot(current_user: dict = Depends(get_current_user)):
+# ----------------- 💬 CHATBOT -----------------
+@router.get("/chatbot", response_class=HTMLResponse)
+async def chatbot_page(request: Request, current_user: dict = Depends(get_current_user)):
     """
-    ✅ Chuyển hướng người dùng đã xác thực tới workspace riêng của họ trên AnythingLLM
+    Hiển thị giao diện chatbot, có thể tạo thread mới hoặc upload tài liệu
     """
     username = current_user["username"]
-    workspace_url = f"http://localhost:3001/workspace/{username}_workspace"
-    return RedirectResponse(url=workspace_url)
+    return templates.TemplateResponse("chatbot.html", {"request": request, "username": username})
+
+
+# ----------------- 📢 TẠO THREAD MỚI -----------------
+@router.post("/chatbot/new-thread")
+async def create_new_thread(current_user: dict = Depends(get_current_user)):
+    """
+    Gọi AnythingLLM API để tạo thread mới
+    """
+    try:
+        response = new_thread(workspace="test")  # workspace có thể đổi theo user
+        if "thread_id" not in response:
+            raise HTTPException(status_code=400, detail="Không tạo được thread mới.")
+        return JSONResponse({"message": "Tạo thread mới thành công", "thread_id": response["thread_id"]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi tạo thread mới: {e}")
+
+
+# ----------------- 📄 TẢI TÀI LIỆU -----------------
+@router.post("/chatbot/upload-doc")
+async def upload_doc_to_workspace(file: UploadFile, current_user: dict = Depends(get_current_user)):
+    """
+    Upload tài liệu vào workspace trong AnythingLLM
+    """
+    try:
+        result = upload_document_to_workspace("test", file)
+        return JSONResponse({"message": "Tải tài liệu thành công", "result": result})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi tải tài liệu: {e}")
+
+
+# ----------------- 💭 GỬI TIN NHẮN CHATBOT -----------------
+@router.post("/chatbot/send-message")
+async def send_chat_message(request: Request, current_user: dict = Depends(get_current_user)):
+    """
+    Gửi tin nhắn tới chatbot và trả về phản hồi
+    """
+    data = await request.json()
+    message = data.get("message")
+    if not message:
+        raise HTTPException(status_code=400, detail="Tin nhắn trống")
+
+    try:
+        reply = chat(workspace="test", thread_id="default", message=message)
+        return JSONResponse({"reply": reply})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi gửi tin nhắn: {e}")
+
+
+# ----------------- 🕓 LỊCH SỬ TRÒ CHUYỆN -----------------
+@router.get("/chatbot/history", response_class=JSONResponse)
+async def get_chat_history(current_user: dict = Depends(get_current_user)):
+    """
+    Lấy lịch sử trò chuyện từ AnythingLLM để hiển thị giao diện chat
+    """
+    try:
+        history = get_chatbot_history(workspace="test", thread_id="default")
+        return JSONResponse({"history": history})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lấy lịch sử trò chuyện: {e}")

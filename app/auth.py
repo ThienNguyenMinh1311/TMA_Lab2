@@ -80,7 +80,7 @@ def get_current_user(access_token: str = Cookie(None)):
         user = users_collection.find_one({"username": username})
         if user is None:
             raise HTTPException(status_code=401, detail="User not found")
-        return {"username": username, "role": user["role"]}
+        return {"username": username, "role": user["role"], "access": user.get("access", [])}
     except Exception:
         raise HTTPException(status_code=401, detail="Token expired or invalid")
 

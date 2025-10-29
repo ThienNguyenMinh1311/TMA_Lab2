@@ -12,13 +12,14 @@ import os
 from .users_db import get_hashed as get_hashed_password
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, DuplicateKeyError
+from app.config import MONGODB_URI, ANYTHING_API_KEY, ANYTHING_API_BASE
+
 
 router = APIRouter(prefix="/admin", tags=["Admin Dashboard"])
 
 # =========================
 # ⚙️ MongoDB Setup
 # =========================
-MONGODB_URI = "mongodb+srv://tian_ng:matkhau@tiandata.uovixjo.mongodb.net/"
 
 def connect_to_mongodb():
     try:
@@ -186,10 +187,6 @@ async def delete_document(filename: str):
 # ==============================
 # 🔹 AnythingLLM Configuration
 # ==============================
-
-ANYTHING_API_KEY = "YOUR_API_KEY"
-ANYTHING_API_BASE = "http://localhost:3001/api/v1"
-
 HEADERS_JSON = {
     "Authorization": f"Bearer {ANYTHING_API_KEY}",
     "Content-Type": "application/json",
@@ -200,10 +197,6 @@ HEADERS_UPLOAD = {
     "Authorization": f"Bearer {ANYTHING_API_KEY}",
     "accept": "application/json",
 }
-
-# ====== Đường dẫn dataset ======
-DATASET_DIR = "./app/dataset"
-
 
 @router.post("/create-workspace/{username}")
 def create_workspace(username: str):
@@ -239,24 +232,27 @@ def create_workspace(username: str):
     failed_files = []
 
     for filename in access_files:
-        file_path = os.path.join(DATASET_DIR, filename)
-        if not os.path.exists(file_path):
+        file_path = DATASET_DIR / filename  # ✅ Pathlib-style
+
+        if not file_path.exists():
+            print(f"⚠️ File không tồn tại: {file_path}")
             failed_files.append(filename)
             continue
 
         upload_url = f"{ANYTHING_API_BASE}/document/upload/custom-documents"
 
-        files = {
-            "file": (filename, open(file_path, "rb"), "text/plain")
-        }
-        data_upload = {
-            "addToWorkspaces": workspace_name,
-            "metadata": ""
-        }
-
         try:
-            upload_res = requests.post(upload_url, headers=HEADERS_UPLOAD, files=files, data=data_upload)
+            with open(file_path, "rb") as f:
+                files = {"file": (filename, f, "text/plain")}
+                data_upload = {
+                    "addToWorkspaces": workspace_name,
+                    "metadata": ""
+                }
+
+                upload_res = requests.post(upload_url, headers=HEADERS_UPLOAD, files=files, data=data_upload)
+
             if upload_res.status_code != 200:
+                print(f"❌ Upload thất bại: {filename} -> {upload_res.text}")
                 failed_files.append(filename)
             else:
                 print(f"📄 Uploaded {filename} -> {workspace_name}")

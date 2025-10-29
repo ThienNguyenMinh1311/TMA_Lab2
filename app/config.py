@@ -10,6 +10,13 @@ KB_DIR = os.path.join(BASE_DIR, "kb_storage")
 LOG_FILE = os.path.join(BASE_DIR, "logs", "system.log")
 SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 
+# Database
+MONGODB_URI = os.getenv("MONGODB_URI")
+
+# AnythingLLM
+ANYTHING_API_KEY = os.getenv("ANYTHING_API_KEY")
+ANYTHING_API_BASE = os.getenv("ANYTHING_API_BASE")
+
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 ngày
