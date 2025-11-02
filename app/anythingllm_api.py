@@ -104,7 +104,13 @@ def chat(username: str, thread_slug: str = None, message: str = None, mode: str 
         return cleaned_response
     
 def upload_document_to_workspace(username: str, file: UploadFile = File(...)):
-    url = f"{ANYTHING_API_BASE}/workspace/{username}_workspace/upload"
+    """
+    Upload tài liệu vào workspace của người dùng trong AnythingLLM
+    (Chuẩn hóa theo API /document/upload/custom-documents)
+    """
+    workspace_name = f"{username}_workspace"
+    upload_url = f"{ANYTHING_API_BASE}/document/upload/custom-documents"
+
     HEADERS_UPLOAD = {
         "Authorization": f"Bearer {ANYTHING_API_KEY}",
         "accept": "application/json",
@@ -112,8 +118,13 @@ def upload_document_to_workspace(username: str, file: UploadFile = File(...)):
 
     try:
         # Gửi file trực tiếp từ request người dùng
-        files = {"file": (file.filename, file.file, file.content_type)}
-        res = requests.post(url, headers=HEADERS_UPLOAD, files=files)
+        files = {"file": (file.filename, file.file, file.content_type or "application/octet-stream")}
+        data_upload = {
+            "addToWorkspaces": workspace_name,
+            "metadata": ""
+        }
+
+        res = requests.post(upload_url, headers=HEADERS_UPLOAD, files=files, data=data_upload)
 
         if res.status_code != 200:
             raise HTTPException(status_code=res.status_code, detail=f"Lỗi khi upload tài liệu: {res.text}")
@@ -124,7 +135,6 @@ def upload_document_to_workspace(username: str, file: UploadFile = File(...)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi gọi AnythingLLM API: {e}")
-
 
 def new_thread(username: str, thread_name: str, thread_slug: str):
     # ==============================

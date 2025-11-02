@@ -30,7 +30,7 @@ def connect_to_mongodb():
 # Initialize MongoDB
 db = connect_to_mongodb()
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="./app/templates")
 
 router = APIRouter(prefix="/lawyer", tags=["Lawyer Dashboard"])
 
@@ -72,15 +72,22 @@ async def chatbot_page(request: Request, current_user: dict = Depends(get_curren
 
 # ----------------- 📢 TẠO THREAD MỚI -----------------
 @router.post("/chatbot/new-thread")
-async def create_new_thread(current_user: dict = Depends(get_current_user)):
+async def create_new_thread(request: Request, current_user: dict = Depends(get_current_user)):
     """
-    Gọi AnythingLLM API để tạo thread mới
+    Gọi AnythingLLM API để tạo thread mới, đồng thời lưu slug vào MongoDB
     """
+    data = await request.json()
+    thread_name = data.get("thread_name")
+    thread_slug = data.get("thread_slug")
+
+    if not thread_name or not thread_slug:
+        raise HTTPException(status_code=400, detail="Thiếu thread_name hoặc thread_slug")
+
+    username = current_user["username"]
+
     try:
-        response = new_thread(workspace="test")  # workspace có thể đổi theo user
-        if "thread_id" not in response:
-            raise HTTPException(status_code=400, detail="Không tạo được thread mới.")
-        return JSONResponse({"message": "Tạo thread mới thành công", "thread_id": response["thread_id"]})
+        response = new_thread(username=username, thread_name=thread_name, thread_slug=thread_slug)
+        return JSONResponse({"message": "Tạo thread mới thành công", "data": response})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi tạo thread mới: {e}")
 
@@ -89,10 +96,12 @@ async def create_new_thread(current_user: dict = Depends(get_current_user)):
 @router.post("/chatbot/upload-doc")
 async def upload_doc_to_workspace(file: UploadFile, current_user: dict = Depends(get_current_user)):
     """
-    Upload tài liệu vào workspace trong AnythingLLM
+    Upload tài liệu vào workspace của người dùng trong AnythingLLM
     """
+    username = current_user["username"]
+
     try:
-        result = upload_document_to_workspace("test", file)
+        result = upload_document_to_workspace(username=username, file=file)
         return JSONResponse({"message": "Tải tài liệu thành công", "result": result})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi tải tài liệu: {e}")
@@ -102,15 +111,20 @@ async def upload_doc_to_workspace(file: UploadFile, current_user: dict = Depends
 @router.post("/chatbot/send-message")
 async def send_chat_message(request: Request, current_user: dict = Depends(get_current_user)):
     """
-    Gửi tin nhắn tới chatbot và trả về phản hồi
+    Gửi tin nhắn tới chatbot của người dùng và trả về phản hồi
     """
     data = await request.json()
     message = data.get("message")
+    thread_slug = data.get("thread_slug")  # Có thể là None
+    mode = data.get("mode", "chat")
+
     if not message:
         raise HTTPException(status_code=400, detail="Tin nhắn trống")
 
+    username = current_user["username"]
+
     try:
-        reply = chat(workspace="test", thread_id="default", message=message)
+        reply = chat(username=username, thread_slug=thread_slug, message=message, mode=mode)
         return JSONResponse({"reply": reply})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi gửi tin nhắn: {e}")
@@ -118,12 +132,38 @@ async def send_chat_message(request: Request, current_user: dict = Depends(get_c
 
 # ----------------- 🕓 LỊCH SỬ TRÒ CHUYỆN -----------------
 @router.get("/chatbot/history", response_class=JSONResponse)
-async def get_chat_history(current_user: dict = Depends(get_current_user)):
+async def get_chat_history(thread_slug: str = None, current_user: dict = Depends(get_current_user)):
     """
     Lấy lịch sử trò chuyện từ AnythingLLM để hiển thị giao diện chat
     """
+    username = current_user["username"]
+
     try:
-        history = get_chatbot_history(workspace="test", thread_id="default")
-        return JSONResponse({"history": history})
+        user_chats, llm_replies = get_chatbot_history(username=username, thread_slug=thread_slug)
+        return JSONResponse({"user_chats": user_chats, "llm_replies": llm_replies})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi lấy lịch sử trò chuyện: {e}")
+
+
+# ----------------- 📁 DANH SÁCH THREADS CỦA USER -----------------
+@router.get("/chatbot/threads", response_class=JSONResponse)
+async def list_user_threads(current_user: dict = Depends(get_current_user)):
+    """
+    Trả về danh sách các thread (slug) mà user đã tạo — lưu trong MongoDB
+    """
+    username = current_user["username"]
+
+    try:
+        client = MongoClient(MONGODB_URI)
+        db = client["mydatabase"]
+        users_collection = db["users"]
+        user_doc = users_collection.find_one({"username": username}, {"_id": 0, "slugs": 1})
+        client.close()
+
+        if not user_doc:
+            raise HTTPException(status_code=404, detail="Không tìm thấy người dùng trong MongoDB.")
+
+        return JSONResponse({"threads": user_doc.get("slugs", [])})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi truy xuất danh sách threads: {e}")
+
