@@ -195,3 +195,28 @@ def new_thread(username: str, thread_name: str, thread_slug: str):
 
     return data
 
+def exist_user_workspaces(username: str):
+    url = f"{ANYTHING_API_BASE}/workspaces"
+    HEADERS_JSON = {
+        "Authorization": f"Bearer {ANYTHING_API_KEY}",  
+        "accept": "application/json",
+    }
+    
+    res = requests.get(url, headers=HEADERS_JSON)
+    if res.status_code != 200:
+        raise HTTPException(status_code=res.status_code, detail=f"Lỗi khi lấy danh sách workspaces: {res.text}")
+    
+    if f"{username}_workspace" in res.text:
+        return True
+    return False
+
+def drop_user_workspace(username: str):
+    url = f"{ANYTHING_API_BASE}/workspace/{username}_workspace"
+    HEADERS_JSON = {
+        "Authorization": f"Bearer {ANYTHING_API_KEY}",  
+        "accept": "*/*",
+    }
+    
+    res = requests.delete(url, headers=HEADERS_JSON)
+    if res.status_code != 200:
+        raise HTTPException(status_code=res.status_code, detail=f"Lỗi khi xóa workspace: {res.text}")
