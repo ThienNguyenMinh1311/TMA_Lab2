@@ -145,25 +145,25 @@ async def get_chat_history(thread_slug: str = None, current_user: dict = Depends
         raise HTTPException(status_code=500, detail=f"Lỗi khi lấy lịch sử trò chuyện: {e}")
 
 
-# ----------------- 📁 DANH SÁCH THREADS CỦA USER -----------------
-@router.get("/chatbot/threads", response_class=JSONResponse)
-async def list_user_threads(current_user: dict = Depends(get_current_user)):
-    """
-    Trả về danh sách các thread (slug) mà user đã tạo — lưu trong MongoDB
-    """
-    username = current_user["username"]
+# # ----------------- 📁 DANH SÁCH THREADS CỦA USER -----------------
+# @router.get("/chatbot/threads", response_class=JSONResponse)
+# async def list_user_threads(current_user: dict = Depends(get_current_user)):
+#     """
+#     Trả về danh sách các thread (slug) mà user đã tạo — lưu trong MongoDB
+#     """
+#     username = current_user["username"]
 
-    try:
-        client = MongoClient(MONGODB_URI)
-        db = client["mydatabase"]
-        users_collection = db["users"]
-        user_doc = users_collection.find_one({"username": username}, {"_id": 0, "slugs": 1})
-        client.close()
+#     try:
+#         client = MongoClient(MONGODB_URI)
+#         db = client["mydatabase"]
+#         users_collection = db["users"]
+#         user_doc = users_collection.find_one({"username": username}, {"_id": 0, "slugs": 1})
+#         client.close()
 
-        if not user_doc:
-            raise HTTPException(status_code=404, detail="Không tìm thấy người dùng trong MongoDB.")
+#         if not user_doc:
+#             raise HTTPException(status_code=404, detail="Không tìm thấy người dùng trong MongoDB.")
 
-        return JSONResponse({"threads": user_doc.get("slugs", [])})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi khi truy xuất danh sách threads: {e}")
+#         return JSONResponse({"threads": user_doc.get("slugs", [])})
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Lỗi khi truy xuất danh sách threads: {e}")
 
