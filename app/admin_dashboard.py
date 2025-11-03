@@ -13,6 +13,7 @@ from .users_db import get_hashed as get_hashed_password
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, DuplicateKeyError
 from app.config import MONGODB_URI, ANYTHING_API_KEY, ANYTHING_API_BASE
+from app.anythingllm_api import exist_user_workspaces, drop_user_workspace
 
 
 router = APIRouter(prefix="/admin", tags=["Admin Dashboard"])
@@ -143,7 +144,7 @@ async def update_user(username: str, request: Request):
 
 @router.delete("/users/{username}")
 def delete_user(username: str):
-    """Xóa người dùng (trừ admin)"""
+    """Xóa người dùng (trừ admin) + xóa luôn workspace"""
     user = users_collection.find_one({"username": username})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -151,8 +152,15 @@ def delete_user(username: str):
     if user.get("role") == "admin":
         raise HTTPException(status_code=403, detail="Cannot delete admin user")
 
+    # 🔹 Xóa workspace trước (nếu có)
+    if exist_user_workspaces(username):
+        try:
+            drop_user_workspace(username)
+        except Exception as e:
+            print(f"⚠️ Không thể xóa workspace của {username}: {e}")
+
     users_collection.delete_one({"username": username})
-    return JSONResponse({"message": f"User '{username}' deleted successfully."})
+    return JSONResponse({"message": f"User '{username}' và workspace liên quan đã được xóa."})
 
 # =========================
 # 🔹 QUẢN LÝ TÀI LIỆU LOCAL
@@ -202,8 +210,9 @@ HEADERS_UPLOAD = {
 def create_workspace(username: str):
     """
     ✅ Khi admin nhấn "Tạo Workspace"
-    1️⃣ Gọi AnythingLLM API để tạo workspace <username>_workspace
-    2️⃣ Tự động embed tất cả file trong access của user
+    1️⃣ Kiểm tra workspace tồn tại -> Báo lỗi
+    2️⃣ Gọi AnythingLLM API để tạo workspace <username>_workspace
+    3️⃣ Tự động embed tất cả file trong access của user
     """
     # 🔹 Bước 1: Lấy thông tin user từ MongoDB
     user = users_collection.find_one({"username": username})
@@ -211,6 +220,10 @@ def create_workspace(username: str):
         raise HTTPException(status_code=404, detail=f"Không tìm thấy người dùng {username}")
 
     workspace_name = f"{username}_workspace"
+
+    # 🔹 Kiểm tra workspace đã tồn tại chưa
+    if exist_user_workspaces(username):
+        raise HTTPException(status_code=400, detail=f"Workspace '{workspace_name}' đã tồn tại")
 
     # 🔹 Bước 2: Tạo workspace trong AnythingLLM
     create_url = f"{ANYTHING_API_BASE}/workspace/new"
@@ -232,7 +245,7 @@ def create_workspace(username: str):
     failed_files = []
 
     for filename in access_files:
-        file_path = DATASET_DIR / filename  # ✅ Pathlib-style
+        file_path = DATASET_DIR / filename
 
         if not file_path.exists():
             print(f"⚠️ File không tồn tại: {file_path}")
