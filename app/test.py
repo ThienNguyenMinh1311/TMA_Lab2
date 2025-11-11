@@ -1,24 +1,25 @@
-import json
-from config import ANYTHING_API_BASE, ANYTHING_API_KEY
 import requests
-import re
-import os
 
-print("Running AnythingLLM API Test...")
+def create_workspace():
+    url = f"{ANYTHING_API_BASE}/workspace/lawyer1_workspace/update"
 
-url = f"{ANYTHING_API_BASE}/workspace/test/thread/new"
-HEADERS_JSON = {
-    "Authorization": f"Bearer {ANYTHING_API_KEY}",  
-    "accept": "application/json",
-}
-payload = {
-    "name": "new_thread",
-    "slug": "12345678910"
-}
+    payload = {
+        "chatProvider": "ollama",
+        "chatModel": "qwen3:8b"
+    }
 
-res = requests.post(url, headers=HEADERS_JSON, json=payload)
+    HEADERS_JSON = {
+        "Authorization": f"Bearer {ANYTHING_API_KEY}",
+        "Content-Type": "application/json",
+        "accept": "application/json",
+    }
 
+    response = requests.post(url, json=payload, headers=HEADERS_JSON)
+    if response.status_code == 200:
+        return response.text
+    else:
+        raise Exception(f"Failed to create workspace: {response.status_code} - {response.text}")
 
-
-
-
+# Thử tạo workspace
+workspace_info = create_workspace()
+print(workspace_info)

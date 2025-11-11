@@ -13,7 +13,7 @@ from .users_db import get_hashed as get_hashed_password
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, DuplicateKeyError
 from app.config import MONGODB_URI, ANYTHING_API_KEY, ANYTHING_API_BASE
-from app.anythingllm_api import exist_user_workspaces, drop_user_workspace
+from app.anythingllm_api import exist_user_workspaces, drop_user_workspace, create_new_workspace, upload_document_to_workspace
 
 
 router = APIRouter(prefix="/admin", tags=["Admin Dashboard"])
@@ -226,19 +226,7 @@ def create_workspace(username: str):
         raise HTTPException(status_code=400, detail=f"Workspace '{workspace_name}' đã tồn tại")
 
     # 🔹 Bước 2: Tạo workspace trong AnythingLLM
-    create_url = f"{ANYTHING_API_BASE}/workspace/new"
-    payload = {"name": workspace_name}
-
-    try:
-        res = requests.post(create_url, headers=HEADERS_JSON, json=payload)
-        if res.status_code != 200:
-            raise HTTPException(status_code=res.status_code, detail=f"Lỗi tạo workspace: {res.text}")
-
-        data = res.json()
-        print(f"✅ Workspace created: {data}")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi khi gọi AnythingLLM API: {e}")
+    create_new_workspace(username)
 
     # 🔹 Bước 3: Embed các file access của user
     access_files = user.get("access", [])

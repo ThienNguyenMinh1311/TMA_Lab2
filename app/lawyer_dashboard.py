@@ -70,26 +70,26 @@ async def chatbot_page(request: Request, current_user: dict = Depends(get_curren
     return templates.TemplateResponse("chatbot.html", {"request": request, "username": username})
 
 
-# ----------------- 📢 TẠO THREAD MỚI -----------------
-@router.post("/chatbot/new-thread")
-async def create_new_thread(request: Request, current_user: dict = Depends(get_current_user)):
-    """
-    Gọi AnythingLLM API để tạo thread mới, đồng thời lưu slug vào MongoDB
-    """
-    data = await request.json()
-    thread_name = data.get("thread_name")
-    thread_slug = data.get("thread_slug")
+# # ----------------- 📢 TẠO THREAD MỚI -----------------
+# @router.post("/chatbot/new-thread")
+# async def create_new_thread(request: Request, current_user: dict = Depends(get_current_user)):
+#     """
+#     Gọi AnythingLLM API để tạo thread mới, đồng thời lưu slug vào MongoDB
+#     """
+#     data = await request.json()
+#     thread_name = data.get("thread_name")
+#     thread_slug = data.get("thread_slug")
 
-    if not thread_name or not thread_slug:
-        raise HTTPException(status_code=400, detail="Thiếu thread_name hoặc thread_slug")
+#     if not thread_name or not thread_slug:
+#         raise HTTPException(status_code=400, detail="Thiếu thread_name hoặc thread_slug")
 
-    username = current_user["username"]
+#     username = current_user["username"]
 
-    try:
-        response = new_thread(username=username, thread_name=thread_name, thread_slug=thread_slug)
-        return JSONResponse({"message": "Tạo thread mới thành công", "data": response})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi khi tạo thread mới: {e}")
+#     try:
+#         response = new_thread(username=username, thread_name=thread_name, thread_slug=thread_slug)
+#         return JSONResponse({"message": "Tạo thread mới thành công", "data": response})
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Lỗi khi tạo thread mới: {e}")
 
 
 # ----------------- 📄 TẢI TÀI LIỆU -----------------
@@ -131,18 +131,24 @@ async def send_chat_message(request: Request, current_user: dict = Depends(get_c
 
 
 # ----------------- 🕓 LỊCH SỬ TRÒ CHUYỆN -----------------
-@router.get("/chatbot/history", response_class=JSONResponse)
-async def get_chat_history(thread_slug: str = None, current_user: dict = Depends(get_current_user)):
-    """
-    Lấy lịch sử trò chuyện từ AnythingLLM để hiển thị giao diện chat
-    """
-    username = current_user["username"]
+@router.get("/chatbot/history")
+def load_chat_history(username: str = "lawyer1", thread_slug: str = None):
+    user_chats, llm_replies = get_chatbot_history(username, thread_slug)
 
-    try:
-        user_chats, llm_replies = get_chatbot_history(username=username, thread_slug=thread_slug)
-        return JSONResponse({"user_chats": user_chats, "llm_replies": llm_replies})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi khi lấy lịch sử trò chuyện: {e}")
+    chat_history = []
+
+    # Gom theo thứ tự user → bot
+    for u, b in zip(user_chats, llm_replies):
+        chat_history.append({
+            "role": "user",
+            "content": u
+        })
+        chat_history.append({
+            "role": "assistant",
+            "content": b
+        })
+
+    return {"history": chat_history}
 
 
 # # ----------------- 📁 DANH SÁCH THREADS CỦA USER -----------------

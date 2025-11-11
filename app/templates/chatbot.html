@@ -12,14 +12,15 @@
     <p class="username">Xin chào, {{ username }}</p>
 
     <div class="chat-actions">
-      <button id="newThreadBtn" class="btn">🧵 Tạo thread mới</button>
       <label class="btn upload-btn">
         📤 Tải tài liệu
         <input type="file" id="uploadFile" hidden />
       </label>
+
       <a href="/lawyer/dashboard" class="btn back-btn">⬅️ Quay lại Dashboard</a>
     </div>
 
+    <!-- KHÔNG render chat ở server -->
     <div id="chatWindow" class="chat-window"></div>
 
     <div class="chat-input">
@@ -31,4 +32,3 @@
   <script src="/static/chatbot.js"></script>
 </body>
 </html>
-  

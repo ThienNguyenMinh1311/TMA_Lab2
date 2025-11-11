@@ -1,21 +1,22 @@
 const chatWindow = document.getElementById("chatWindow");
 const sendBtn = document.getElementById("sendBtn");
 const chatInput = document.getElementById("chatMessage");
-const newThreadBtn = document.getElementById("newThreadBtn");
 const uploadFile = document.getElementById("uploadFile");
 
-// ======================= 💬 HIỂN THỊ LỊCH SỬ CHAT =======================
+
+// ======================= 💬 LOAD LỊCH SỬ CHAT =======================
 async function loadChatHistory() {
   try {
     const res = await fetch("/lawyer/chatbot/history");
     const data = await res.json();
+
     chatWindow.innerHTML = "";
 
-    if (data.history && Array.isArray(data.history)) {
-      data.history.forEach((msg) => {
-        appendMessage(msg.role === "user" ? "user" : "bot", msg.content);
-      });
-    }
+    if (!data.history || !Array.isArray(data.history)) return;
+
+    data.history.forEach((msg) => {
+      appendMessage(msg.role, msg.content);
+    });
   } catch (error) {
     console.error("❌ Lỗi tải lịch sử:", error);
   }
@@ -23,17 +24,6 @@ async function loadChatHistory() {
 
 loadChatHistory();
 
-// ======================= 🧵 TẠO THREAD MỚI =======================
-newThreadBtn.addEventListener("click", async () => {
-  try {
-    const res = await fetch("/lawyer/chatbot/new-thread", { method: "POST" });
-    const data = await res.json();
-    alert(data.message || "Đã tạo thread mới");
-    chatWindow.innerHTML = "";
-  } catch (err) {
-    alert("Lỗi khi tạo thread mới");
-  }
-});
 
 // ======================= 📤 UPLOAD FILE =======================
 uploadFile.addEventListener("change", async (e) => {
@@ -51,12 +41,18 @@ uploadFile.addEventListener("change", async (e) => {
     const data = await res.json();
     alert(data.message || "Tải lên thành công");
   } catch (error) {
-    alert("Lỗi khi tải tài liệu");
+    alert("❌ Lỗi khi tải tài liệu");
   }
 });
 
+
 // ======================= 💬 GỬI TIN NHẮN =======================
-sendBtn.addEventListener("click", async () => {
+sendBtn.addEventListener("click", sendMessage);
+chatInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
+
+async function sendMessage() {
   const text = chatInput.value.trim();
   if (!text) return;
 
@@ -71,16 +67,23 @@ sendBtn.addEventListener("click", async () => {
     });
 
     const data = await res.json();
-    appendMessage("bot", data.reply || "Không có phản hồi.");
+    appendMessage("assistant", data.reply || "Không có phản hồi.");
   } catch (error) {
-    appendMessage("bot", "❌ Lỗi khi gửi tin nhắn.");
+    appendMessage("assistant", "❌ Lỗi khi gửi tin nhắn.");
   }
-});
+}
 
-// ======================= ⚙️ APPEND MESSAGE =======================
-function appendMessage(sender, text) {
+
+// ======================= ⚙️ HIỂN THỊ TIN NHẮN =======================
+function appendMessage(role, text) {
   const div = document.createElement("div");
-  div.className = `message ${sender}`;
+
+  if (role === "user") {
+    div.className = "message user";
+  } else {
+    div.className = "message bot";
+  }
+
   div.textContent = text;
   chatWindow.appendChild(div);
   chatWindow.scrollTop = chatWindow.scrollHeight;

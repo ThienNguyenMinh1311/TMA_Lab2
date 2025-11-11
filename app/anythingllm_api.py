@@ -7,6 +7,24 @@ import requests
 import os
 import re
 
+def create_new_workspace(username: str):
+    url = f"{ANYTHING_API_BASE}/workspace/new"
+    workspace_name = f"{username}_workspace"
+    HEADERS_JSON = {
+        "Authorization": f"Bearer {ANYTHING_API_KEY}",
+        "accept": "application/json",
+    }
+    payload = {
+        "name": workspace_name,
+        "chatProvider": "ollama",
+        "chatModel": "qwen3:8b"
+    }
+    res = requests.post(url, headers=HEADERS_JSON, json=payload)
+    if res.status_code == 200:
+        return res.text
+    else:
+        raise Exception(f"Failed to create workspace: {res.status_code} - {res.text}")
+
 def get_chatbot_history(username: str, thread_slug: str = None):
     """
     Lấy lịch sử chat từ AnythingLLM API dựa trên thread slug hiện tại
@@ -60,7 +78,6 @@ def get_chatbot_history(username: str, thread_slug: str = None):
                 llm_replies.append(cleaned_content)
                 
         return user_chats, llm_replies
-    return [], []
 
 def chat(username: str, thread_slug: str = None, message: str = None, mode: str = "chat"):
     if thread_slug is None:
