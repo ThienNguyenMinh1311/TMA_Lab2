@@ -13,6 +13,7 @@
     <div class="actions">
       <button id="viewDocsBtn" class="btn">📂 Xem tài liệu</button>
       <button id="chatBtn" class="btn">💬 Hỏi Chatbot</button>
+      <button id="profileBtn" class="btn">📑 Xem hồ sơ</button>
     </div>
 
     <!-- Danh sách tài liệu -->
@@ -27,6 +28,21 @@
       <div class="chat-input">
         <input type="text" id="chatMessage" placeholder="Nhập tin nhắn..." />
         <button id="sendBtn">Gửi</button>
+      </div>
+    </div>
+
+    <!-- Hồ sơ cá nhân -->
+    <div id="profileSection" class="section hidden">
+      <h3>📑 Hồ sơ cá nhân</h3>
+
+      <div id="profileView" class="hidden">
+        <iframe id="profileFrame" width="100%" height="500px"></iframe>
+      </div>
+
+      <div id="profileUploadArea">
+        <p id="profileStatus"></p>
+        <input type="file" id="profileFile" accept="application/pdf" />
+        <button id="uploadProfileBtn" class="btn">Tải lên hồ sơ</button>
       </div>
     </div>
   </div>

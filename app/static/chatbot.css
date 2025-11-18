@@ -26,6 +26,40 @@ h2 {
   margin-bottom: 10px;
 }
 
+.mode-switch {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 15px;
+  border: 1px solid #007bff;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 8px 20px;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s;
+  background-color: #e0e0e0; /* nút tắt nhạt */
+  color: #333;
+  font-weight: bold;
+}
+
+.mode-btn.active {
+  background-color: #007bff; /* nút bật sẫm */
+  color: white;
+}
+
+.mode-btn:not(:last-child) {
+  border-right: 1px solid #007bff; /* tạo phân chia giữa 2 nút */
+}
+
+
 .chat-actions {
   display: flex;
   justify-content: space-between;

@@ -24,7 +24,6 @@ async function loadChatHistory() {
 
 loadChatHistory();
 
-
 // ======================= 📤 UPLOAD FILE =======================
 uploadFile.addEventListener("change", async (e) => {
   const file = e.target.files[0];
@@ -45,6 +44,24 @@ uploadFile.addEventListener("change", async (e) => {
   }
 });
 
+// ======================= ⚙️ CHẾ ĐỘ CHAT/QUERY =======================
+let currentMode = "chat"; // mặc định chat
+
+const modeButtons = document.querySelectorAll(".mode-btn");
+
+modeButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    modeButtons.forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentMode = btn.dataset.mode;
+    console.log("Chế độ hiện tại:", currentMode);
+
+    // Optional: đổi placeholder input theo chế độ
+    chatInput.placeholder = currentMode === "chat"
+      ? "Nhập tin nhắn..."
+      : "Nhập truy vấn pháp lý...";
+  });
+});
 
 // ======================= 💬 GỬI TIN NHẮN =======================
 sendBtn.addEventListener("click", sendMessage);
@@ -63,7 +80,9 @@ async function sendMessage() {
     const res = await fetch("/lawyer/chatbot/send-message", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text }),
+      body: JSON.stringify({ 
+        message: text,
+        mode: currentMode}),
     });
 
     const data = await res.json();

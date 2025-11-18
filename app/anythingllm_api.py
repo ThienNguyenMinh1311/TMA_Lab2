@@ -16,8 +16,8 @@ def create_new_workspace(username: str):
     }
     payload = {
         "name": workspace_name,
-        "chatProvider": "ollama",
-        "chatModel": "qwen3:8b"
+        "chatProvider": "openrouter",
+        "chatModel": "qwen/qwen3-30b-a3b:free"
     }
     res = requests.post(url, headers=HEADERS_JSON, json=payload)
     if res.status_code == 200:

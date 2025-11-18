@@ -120,3 +120,16 @@ h2 {
   padding: 10px 20px;
   cursor: pointer;
 }
+
+#profileSection {
+  margin-top: 20px;
+}
+
+#profileFrame {
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+#profileUploadArea {
+  margin-top: 15px;
+}

@@ -116,7 +116,7 @@ async def send_chat_message(request: Request, current_user: dict = Depends(get_c
     data = await request.json()
     message = data.get("message")
     thread_slug = data.get("thread_slug")  # Có thể là None
-    mode = data.get("mode", "chat")
+    mode = data.get("mode")
 
     if not message:
         raise HTTPException(status_code=400, detail="Tin nhắn trống")
@@ -132,7 +132,7 @@ async def send_chat_message(request: Request, current_user: dict = Depends(get_c
 
 # ----------------- 🕓 LỊCH SỬ TRÒ CHUYỆN -----------------
 @router.get("/chatbot/history")
-def load_chat_history(username: str = "lawyer1", thread_slug: str = None):
+def load_chat_history(username: str, thread_slug: str = None):
     user_chats, llm_replies = get_chatbot_history(username, thread_slug)
 
     chat_history = []
@@ -151,25 +151,48 @@ def load_chat_history(username: str = "lawyer1", thread_slug: str = None):
     return {"history": chat_history}
 
 
-# # ----------------- 📁 DANH SÁCH THREADS CỦA USER -----------------
-# @router.get("/chatbot/threads", response_class=JSONResponse)
-# async def list_user_threads(current_user: dict = Depends(get_current_user)):
-#     """
-#     Trả về danh sách các thread (slug) mà user đã tạo — lưu trong MongoDB
-#     """
-#     username = current_user["username"]
+# ========================= 📄 HỒ SƠ LUẬT SƯ (PROFILE / CV) =========================
 
-#     try:
-#         client = MongoClient(MONGODB_URI)
-#         db = client["mydatabase"]
-#         users_collection = db["users"]
-#         user_doc = users_collection.find_one({"username": username}, {"_id": 0, "slugs": 1})
-#         client.close()
+PROFILE_DIR = Path("./app/profiles/")
+PROFILE_DIR.mkdir(parents=True, exist_ok=True)
 
-#         if not user_doc:
-#             raise HTTPException(status_code=404, detail="Không tìm thấy người dùng trong MongoDB.")
+@router.get("/profile", response_class=JSONResponse)
+async def get_profile(current_user: dict = Depends(get_current_user)):
+    """
+    Kiểm tra xem user đã có hồ sơ PDF hay chưa.
+    """
+    username = current_user["username"]
+    profile_path = PROFILE_DIR / f"{username}.pdf"
 
-#         return JSONResponse({"threads": user_doc.get("slugs", [])})
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Lỗi khi truy xuất danh sách threads: {e}")
+    if profile_path.exists():
+        return {"exists": True, "filename": f"{username}.pdf"}
+    else:
+        return {"exists": False}
+
+
+@router.post("/upload_profile", response_class=JSONResponse)
+async def upload_profile(
+    file: UploadFile,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Upload hoặc thay thế hồ sơ PDF của user.
+    """
+    username = current_user["username"]
+
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Chỉ được phép upload file PDF!")
+
+    save_path = PROFILE_DIR / f"{username}.pdf"
+
+    try:
+        # Lưu file vào server
+        with open(save_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+
+        return {"message": "Upload thành công", "filename": f"{username}.pdf"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi upload file: {e}")
 
