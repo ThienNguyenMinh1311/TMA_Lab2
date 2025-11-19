@@ -7,18 +7,22 @@ from pydantic import BaseModel
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from passlib.context import CryptContext
+from app.config import MONGODB_URI
 from dotenv import load_dotenv
 import os
+import certifi
 
 # Load environment variables
 load_dotenv()
 
-# MongoDB connection setup
-MONGODB_URI = "mongodb+srv://tian_ng:matkhau@tiandata.uovixjo.mongodb.net/"
-
 def connect_to_mongodb():
     try:
-        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        client = MongoClient(
+            MONGODB_URI,
+            serverSelectionTimeoutMS=5000,
+            tls=True,
+            tlsCAFile=certifi.where()
+        )
         client.admin.command('ping')  # Test connection
         db = client['mydatabase']
         return db

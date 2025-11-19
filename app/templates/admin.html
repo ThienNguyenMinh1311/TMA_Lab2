@@ -12,7 +12,8 @@
 
   <nav>
     <button onclick="showSection('lawyer')">👤 Quản lý luật sư</button>
-    <button onclick="showSection('document')">📂 Quản lý tài liệu</button>
+    <button onclick="showSection('document')">📂 Quản lý tài liệu</button>\
+    <button onclick="showSection('workspace')">🤖 Chatbot workspace</button>
   </nav>
 
   <!-- 👇 Phần quản lý luật sư -->
@@ -49,6 +50,16 @@
       </thead>
       <tbody id="document-table"></tbody>
     </table>
+  </section>
+
+  <!-- ============================= -->
+  <!-- 🤖 WORKSPACE CHATBOT ADMIN -->
+  <!-- ============================= -->
+  <section id="workspace-section" style="display: none; padding: 20px;">
+    <h2>🤖 Chatbot Workspace (Admin)</h2>
+
+    <!-- Iframe nhúng chatbot -->
+    <iframe id="chatbot-iframe" src="/admin/chatbot" width="100%" height="600px" style="border:1px solid #ccc;"></iframe>
   </section>
 
   <script src="/static/admin_dashboard.js"></script>

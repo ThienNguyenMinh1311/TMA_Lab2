@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>💬 Chatbot Luật sư</title>
+  <link rel="stylesheet" href="/static/chatbot.css" />
+</head>
+<body>
+  <div class="chat-container">
+    <h2>🤖 Chatbot hỗ trợ pháp lý</h2>
+    <p class="username">Xin chào, {{ username }}</p>
+
+    <div class="mode-switch">
+      <button class="mode-btn active" data-mode="chat">Chat</button>
+      <button class="mode-btn" data-mode="query">Query</button>
+    </div>
+
+    <div class="chat-actions">
+      <label class="btn upload-btn">
+        📤 Tải tài liệu
+        <input type="file" id="uploadFile" hidden />
+      </label>
+
+      <a href="/admin/dashboard" class="btn back-btn">⬅️ Quay lại Dashboard</a>
+    </div>
+
+    <!-- KHÔNG render chat ở server -->
+    <div id="chatWindow" class="chat-window"></div>
+
+    <div class="chat-input">
+      <input type="text" id="chatMessage" placeholder="Nhập tin nhắn..." />
+      <button id="sendBtn">Gửi</button>
+    </div>
+  </div>
+
+  <script src="/static/admin_chatbot.js"></script>
+</body>
+</html>

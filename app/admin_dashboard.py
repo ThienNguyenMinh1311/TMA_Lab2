@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request, UploadFile, Form
+from fastapi import APIRouter, HTTPException, Request, UploadFile, Form, Depends
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse 
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -13,8 +13,15 @@ from .users_db import get_hashed as get_hashed_password
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, DuplicateKeyError
 from app.config import MONGODB_URI, ANYTHING_API_KEY, ANYTHING_API_BASE
-from app.anythingllm_api import exist_user_workspaces, drop_user_workspace, create_new_workspace, upload_document_to_workspace
-
+from app.anythingllm_api import (
+    exist_user_workspaces, 
+    drop_user_workspace, 
+    create_new_workspace, 
+    upload_document_to_workspace, 
+    check_exist_document_in_workspace
+)
+from app.auth import get_current_user
+import certifi
 
 router = APIRouter(prefix="/admin", tags=["Admin Dashboard"])
 
@@ -24,7 +31,10 @@ router = APIRouter(prefix="/admin", tags=["Admin Dashboard"])
 
 def connect_to_mongodb():
     try:
-        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        client = MongoClient(
+            MONGODB_URI, 
+            serverSelectionTimeoutMS=5000,
+            tlsCAFile=certifi.where())
         client.admin.command("ping")
         db = client["mydatabase"]
         return db
@@ -209,26 +219,26 @@ HEADERS_UPLOAD = {
 @router.post("/create-workspace/{username}")
 def create_workspace(username: str):
     """
-    ✅ Khi admin nhấn "Tạo Workspace"
-    1️⃣ Kiểm tra workspace tồn tại -> Báo lỗi
-    2️⃣ Gọi AnythingLLM API để tạo workspace <username>_workspace
-    3️⃣ Tự động embed tất cả file trong access của user
+    1. Kiểm tra workspace tồn tại
+    2. Tạo workspace mới
+    3. Tự động upload + embed tất cả file trong access của user
+       (dùng upload_document_to_workspace đã bao gồm logic check + embed)
     """
-    # 🔹 Bước 1: Lấy thông tin user từ MongoDB
+    # --- Lấy thông tin user ---
     user = users_collection.find_one({"username": username})
     if not user:
         raise HTTPException(status_code=404, detail=f"Không tìm thấy người dùng {username}")
 
     workspace_name = f"{username}_workspace"
 
-    # 🔹 Kiểm tra workspace đã tồn tại chưa
+    # --- Kiểm tra workspace ---
     if exist_user_workspaces(username):
         raise HTTPException(status_code=400, detail=f"Workspace '{workspace_name}' đã tồn tại")
 
-    # 🔹 Bước 2: Tạo workspace trong AnythingLLM
+    # --- Tạo workspace ---
     create_new_workspace(username)
 
-    # 🔹 Bước 3: Embed các file access của user
+    # --- Upload và embed toàn bộ file access ---
     access_files = user.get("access", [])
     failed_files = []
 
@@ -240,26 +250,19 @@ def create_workspace(username: str):
             failed_files.append(filename)
             continue
 
-        upload_url = f"{ANYTHING_API_BASE}/document/upload/custom-documents"
-
         try:
+            # Mở file theo đúng dạng UploadFile của FastAPI
             with open(file_path, "rb") as f:
-                files = {"file": (filename, f, "text/plain")}
-                data_upload = {
-                    "addToWorkspaces": workspace_name,
-                    "metadata": ""
-                }
+                upload_file = UploadFile(
+                    filename=filename,
+                    file=f
+                )
 
-                upload_res = requests.post(upload_url, headers=HEADERS_UPLOAD, files=files, data=data_upload)
-
-            if upload_res.status_code != 200:
-                print(f"❌ Upload thất bại: {filename} -> {upload_res.text}")
-                failed_files.append(filename)
-            else:
-                print(f"📄 Uploaded {filename} -> {workspace_name}")
+                upload_document_to_workspace(username, upload_file)
+                print(f"📄 Done: {filename}")
 
         except Exception as e:
-            print(f"❌ Lỗi upload {filename}: {e}")
+            print(f"❌ Lỗi xử lý file {filename}: {e}")
             failed_files.append(filename)
 
     return {
@@ -267,3 +270,12 @@ def create_workspace(username: str):
         "workspace": {"slug": workspace_name},
         "failed_files": failed_files
     }
+
+# ----------------- 💬 CHATBOT -----------------
+@router.get("/chatbot", response_class=HTMLResponse)
+async def chatbot_page(request: Request, current_user: dict = Depends(get_current_user)):
+    """
+    Hiển thị giao diện chatbot, có thể tạo thread mới hoặc upload tài liệu
+    """
+    username = current_user["username"]
+    return templates.TemplateResponse("admin_chatbot.html", {"request": request, "username": username})

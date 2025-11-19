@@ -119,39 +119,6 @@ def chat(username: str, thread_slug: str = None, message: str = None, mode: str 
         raw_response = response_json["textResponse"]
         cleaned_response = re.sub(r"<think>.*?</think>", "", raw_response, flags=re.DOTALL).strip()
         return cleaned_response
-    
-def upload_document_to_workspace(username: str, file: UploadFile = File(...)):
-    """
-    Upload tài liệu vào workspace của người dùng trong AnythingLLM
-    (Chuẩn hóa theo API /document/upload/custom-documents)
-    """
-    workspace_name = f"{username}_workspace"
-    upload_url = f"{ANYTHING_API_BASE}/document/upload/custom-documents"
-
-    HEADERS_UPLOAD = {
-        "Authorization": f"Bearer {ANYTHING_API_KEY}",
-        "accept": "application/json",
-    }
-
-    try:
-        # Gửi file trực tiếp từ request người dùng
-        files = {"file": (file.filename, file.file, file.content_type or "application/octet-stream")}
-        data_upload = {
-            "addToWorkspaces": workspace_name,
-            "metadata": ""
-        }
-
-        res = requests.post(upload_url, headers=HEADERS_UPLOAD, files=files, data=data_upload)
-
-        if res.status_code != 200:
-            raise HTTPException(status_code=res.status_code, detail=f"Lỗi khi upload tài liệu: {res.text}")
-
-        data = res.json()
-        print(f"✅ Document uploaded and embedded: {data}")
-        return {"message": "Upload thành công!", "data": data}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi khi gọi AnythingLLM API: {e}")
 
 def new_thread(username: str, thread_name: str, thread_slug: str):
     # ==============================
@@ -237,3 +204,88 @@ def drop_user_workspace(username: str):
     res = requests.delete(url, headers=HEADERS_JSON)
     if res.status_code != 200:
         raise HTTPException(status_code=res.status_code, detail=f"Lỗi khi xóa workspace: {res.text}")
+
+def get_document_name(folder_name: str, document_name: str) -> list:
+    url = f"{ANYTHING_API_BASE}/documents/folder/{folder_name}"
+    HEADERS_UPLOAD = {
+            "Authorization": f"Bearer {ANYTHING_API_KEY}",
+            "accept": "application/json",
+        }
+    response = requests.get(url, headers=HEADERS_UPLOAD)
+    if response.status_code != 200:
+        raise Exception(f"Error fetching documents: {response.text}")
+    data = response.json()
+    for doc in data.get("documents", []):
+        if document_name in doc.get("name", ""):
+            return doc["name"]
+        
+    return "Not found"
+
+def check_exist_document_in_workspace(username: str, document_title: str):
+    url = f"{ANYTHING_API_BASE}/documents/folder/custom-documents"
+
+    HEADERS_JSON = {
+        "Authorization": f"Bearer {ANYTHING_API_KEY}",
+        "Content-Type": "application/json",
+        "accept": "application/json",
+    }
+
+    response = requests.get(url, headers=HEADERS_JSON)
+
+    if response.status_code == 200:
+        data = response.json()
+        for item in data['documents']:
+            if item['title'] == document_title:
+                return True
+        return False
+    else:
+        raise HTTPException(status_code=response.status_code, detail=f"Failed to get documents: {response.text}")
+
+def upload_document_to_workspace(username: str, file: UploadFile = File(...)):
+    """
+    Kiểm tra tài liệu đã tồn tại trong custom-documents chưa
+    Nếu chưa thì thêm vào custom-documents và workspace của người dùng
+    Upload tài liệu vào workspace của người dùng trong AnythingLLM
+    (Chuẩn hóa theo API /document/upload/custom-documents)
+    """
+    if not check_exist_document_in_workspace(username, file.filename):
+        workspace_name = f"{username}_workspace"
+        upload_url = f"{ANYTHING_API_BASE}/document/upload/custom-documents"
+
+        HEADERS_UPLOAD = {
+            "Authorization": f"Bearer {ANYTHING_API_KEY}",
+            "accept": "application/json",
+        }
+
+        try:
+            # Gửi file trực tiếp từ request người dùng
+            files = {"file": (file.filename, file.file, file.content_type or "application/octet-stream")}
+
+            res = requests.post(upload_url, headers=HEADERS_UPLOAD, files=files)
+
+            if res.status_code != 200:
+                raise HTTPException(status_code=res.status_code, detail=f"Lỗi khi upload tài liệu: {res.text}")
+
+            data = res.json()
+            print(f"✅ Document uploaded and embedded")
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Lỗi khi gọi AnythingLLM API: {e}")
+    
+    if get_document_name("custom-documents", file.filename) == "Not found":
+        raise HTTPException(status_code=404, detail="Tài liệu không tồn tại trong custom-documents sau khi upload.")    
+    else:
+        filename = get_document_name("custom-documents", file.filename)
+        url = f"{ANYTHING_API_BASE}/workspace/{username}_workspace/update-embeddings"
+        payload = {
+            "adds": [f"custom-documents/{filename}"]
+        }
+        HEADERS_UPLOAD = {
+                "Authorization": f"Bearer {ANYTHING_API_KEY}",
+                "accept": "application/json",
+            }
+        res = requests.post(url, headers=HEADERS_UPLOAD, json=payload)
+        if res.status_code != 200:
+            raise HTTPException(status_code=res.status_code, detail=f"Lỗi khi thêm tài liệu vào workspace: {res.text}")
+        print(f"Debug {filename}")
+    

@@ -15,10 +15,16 @@ from app.anythingllm_api import (
     new_thread
 )
 import requests
+import certifi
 
 def connect_to_mongodb():
     try:
-        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        client = MongoClient(
+            MONGODB_URI,
+            serverSelectionTimeoutMS=5000,
+            tls=True,
+            tlsCAFile=certifi.where()
+        )
         client.admin.command('ping')  # Test connection
         db = client['mydatabase']
         return db

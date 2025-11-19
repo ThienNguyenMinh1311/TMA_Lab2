@@ -2,6 +2,8 @@ from passlib.context import CryptContext
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, DuplicateKeyError
 import os
+from app.config import MONGODB_URI
+import certifi
 
 # Password hashing setup
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -16,8 +18,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def connect_to_mongodb():
     try:
         # Use environment variable for MongoDB URI
-        mongo_uri = os.getenv("MONGODB_URI", "mongodb+srv://tian_ng:matkhau@tiandata.uovixjo.mongodb.net/")
-        client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
+        client = MongoClient(
+            MONGODB_URI,
+            serverSelectionTimeoutMS=5000,
+            tls=True,
+            tlsCAFile=certifi.where()
+        )
         
         # Test the connection
         client.admin.command('ping')
