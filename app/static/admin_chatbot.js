@@ -24,23 +24,26 @@ async function loadChatHistory() {
 
 loadChatHistory();
 
-// ======================= 📤 UPLOAD FILE =======================
-uploadFile.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+// ======================= 📤 UPDATE ALL PROFILES =======================
+const updateProfilesBtn = document.getElementById("updateProfilesBtn");
 
-  const formData = new FormData();
-  formData.append("file", file);
+updateProfilesBtn.addEventListener("click", async () => {
+  updateProfilesBtn.disabled = true;
+  updateProfilesBtn.textContent = "⏳ Đang cập nhật...";
 
   try {
-    const res = await fetch("/admin/chatbot/upload-doc", {
-      method: "POST",
-      body: formData,
+    const res = await fetch("/admin/chatbot/upload-all", {
+      method: "POST"
     });
+
     const data = await res.json();
-    alert(data.message || "Tải lên thành công");
+    alert(data.message || "Đã tải toàn bộ hồ sơ.");
   } catch (error) {
-    alert("❌ Lỗi khi tải tài liệu");
+    console.error("❌ Lỗi khi tải hồ sơ:", error);
+    alert("❌ Lỗi khi upload toàn bộ hồ sơ");
+  } finally {
+    updateProfilesBtn.disabled = false;
+    updateProfilesBtn.textContent = "🔄 Cập nhật hồ sơ (tự động)";
   }
 });
 

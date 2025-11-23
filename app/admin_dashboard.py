@@ -18,7 +18,9 @@ from app.anythingllm_api import (
     drop_user_workspace, 
     create_new_workspace, 
     upload_document_to_workspace, 
-    check_exist_document_in_workspace
+    check_exist_document_in_workspace,
+    chat,
+    get_chatbot_history
 )
 from app.auth import get_current_user
 import certifi
@@ -172,9 +174,9 @@ def delete_user(username: str):
     users_collection.delete_one({"username": username})
     return JSONResponse({"message": f"User '{username}' và workspace liên quan đã được xóa."})
 
-# =========================
+# =============================
 # 🔹 QUẢN LÝ TÀI LIỆU LOCAL
-# =========================
+# =============================
 
 @router.get("/documents")
 async def list_documents():
@@ -279,3 +281,90 @@ async def chatbot_page(request: Request, current_user: dict = Depends(get_curren
     """
     username = current_user["username"]
     return templates.TemplateResponse("admin_chatbot.html", {"request": request, "username": username})
+
+# ----------------- UPLOAD DOCUMENTS  -----------------
+PROFILES_DIR = Path("./app/profiles")
+PROFILES_DIR.mkdir(exist_ok=True, parents=True)
+
+
+@router.post("/chatbot/upload-all")
+async def upload_all_profiles(current_user: dict = Depends(get_current_user)):
+    """
+    Upload toàn bộ file trong ./app/profiles vào workspace của AnythingLLM
+    """
+    username = current_user["username"]
+
+    if not PROFILES_DIR.exists():
+        raise HTTPException(status_code=500, detail="Thư mục app/profiles không tồn tại.")
+
+    files = list(PROFILES_DIR.glob("*"))
+
+    if not files:
+        return JSONResponse({"message": "Không có file nào trong app/profiles."})
+
+    uploaded = []
+    failed = []
+
+    for file_path in files:
+        try:
+            # Mở file dưới dạng UploadFile giống như upload từ FE
+            with open(file_path, "rb") as f:
+                upload_file = UploadFile(
+                    filename=file_path.name,
+                    file=f
+                )
+                upload_document_to_workspace(username, upload_file)
+
+            uploaded.append(file_path.name)
+            print(f"📄 Uploaded: {file_path.name}")
+
+        except Exception as e:
+            print(f"❌ Lỗi upload {file_path.name}: {e}")
+            failed.append({"file": file_path.name, "error": str(e)})
+
+    return JSONResponse({
+        "message": "Hoàn tất upload toàn bộ hồ sơ.",
+        "uploaded": uploaded,
+        "failed": failed
+    })
+
+# ----------------- CHAT  -----------------
+@router.post("/chatbot/send-message")
+async def send_chat_message(request: Request, current_user: dict = Depends(get_current_user)):
+    """
+    Gửi tin nhắn tới chatbot của người dùng và trả về phản hồi
+    """
+    data = await request.json()
+    message = data.get("message")
+    thread_slug = data.get("thread_slug")  # Có thể là None
+    mode = data.get("mode")
+
+    if not message:
+        raise HTTPException(status_code=400, detail="Tin nhắn trống")
+
+    username = current_user["username"]
+
+    print("📩 MESSAGE RECEIVED:", message)
+    print("Mode:", mode)
+    print("Username:", username)
+
+    try:
+        reply = chat(username=username, thread_slug=thread_slug, message=message, mode=mode)
+        print("🤖 REPLY SENT:", reply)
+        return JSONResponse({"reply": reply})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi gửi tin nhắn: {e}")
+    
+# ----------------- 🕓 LỊCH SỬ TRÒ CHUYỆN -----------------
+@router.get("/chatbot/history")
+def load_chat_history(current_user: dict = Depends(get_current_user), thread_slug: str = None):
+    username = current_user["username"]
+
+    user_chats, llm_replies = get_chatbot_history(username, thread_slug)
+
+    history = []
+    for u, b in zip(user_chats, llm_replies):
+        history.append({"role": "user", "content": u})
+        history.append({"role": "assistant", "content": b})
+
+    return {"history": history}
